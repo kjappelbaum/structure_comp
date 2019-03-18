@@ -13,20 +13,26 @@ import numpy as np
 import shutil
 from glob import glob
 from pymatgen import Structure
+from concurrent import futures
 from pymatgen.analysis.graphs import StructureGraph
-from pymatgen.analysis.local_env import JMolNN
+from pymatgen.analysis.local_env import JmolNN
 from scipy.spatial.distance import pdist, squareform
 import logging
+from ase.visualize.plot import plot_atoms
+from ase.io import read
+import matplotlib.pyplot as plt
 from tqdm.autonotebook import tqdm
 import pandas as pd
 
-logger = logging.getLogger()
+logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
 
 
 class RemoveDuplicates():
-    def __init__(self, structure_list: list, reduced_structure_dir: str,
-                 remove_reduced_structure_dir: bool):
+    def __init__(self,
+                 structure_list: list,
+                 reduced_structure_dir: str,
+                 remove_reduced_structure_dir: bool = True):
 
         self.structure_list = structure_list
         self.reduced_structure_dir = reduced_structure_dir
@@ -64,7 +70,7 @@ class RemoveDuplicates():
         return number_atoms, density
 
     @staticmethod
-    def get_scalar_matrix(reduced_structure_list: list):
+    def get_scalar_df(reduced_structure_list: list):
         """
         Collect scalar features in a dataframe
         :param reduced_structure_list: list of paths to reduced structures
@@ -73,8 +79,9 @@ class RemoveDuplicates():
         feature_list = []
         logger.info('creating scalar features')
         for structure in tqdm(reduced_structure_list):
+            crystal = Structure.from_file(structure)
             number_atoms, density = RemoveDuplicates.get_scalar_features(
-                structure)
+                crystal)
             features = {
                 'name': structure,
                 'number_atoms': number_atoms,
@@ -86,20 +93,22 @@ class RemoveDuplicates():
 
     @staticmethod
     def get_scalar_distance_matrix(scalar_feature_df: pd.DataFrame,
-                                   threshold: float = 0.2) -> list:
+                                   threshold: float = 0.1) -> list:
         """
         Get structures that probably have the same composition.
         :param scalar_feature_df: pandas Dataframe object with the scalar features
         :param threshold: threshold for the euclidian distance between structure features
         :return: list of tuples which euclidian distance is under threshold
         """
+        logger.debug('columns of dataframe are {}'.format(
+            scalar_feature_df.columns))
         distances = pdist(
             scalar_feature_df.drop(columns=['name']).values,
             metric='euclidean')
         dist_matrix = squareform(distances)
         i, j = np.where(dist_matrix < threshold)
-
-        return list(zip(i, j))
+        logger.debug('found {} and {} composition duplicates'.format(i, j))
+        return list(set(map(tuple, map(sorted, list(zip(i, j)))))) # super ugly
 
     def compare_rmsd(self):
         """
@@ -120,18 +129,20 @@ class RemoveDuplicates():
         pairs = []
         for items in tqdm(tupellist):
             if items[0] != items[1]:
-                nn_strategy = JMolNN()
+                nn_strategy = JmolNN()
                 crystal_a = Structure.from_file(
-                    scalar_feature_df.iloc[items[0]].name)
+                    scalar_feature_df.iloc[items[0]]['name'])
                 crystal_b = Structure.from_file(
-                    scalar_feature_df.iloc[items[1]].name)
+                    scalar_feature_df.iloc[items[1]]['name'])
                 sgraph_a = StructureGraph.with_local_env_strategy(
                     crystal_a, nn_strategy)
                 sgraph_b = StructureGraph.with_local_env_strategy(
                     crystal_b, nn_strategy)
-                distance = sgraph_a.diff(sgraph_b)
-                if distance == 0:
-                    pairs.append(items)
+                try:
+                    if sgraph_a == sgraph_b:
+                        pairs.append(items)
+                except ValueError:
+                    logger.debug('Structures were probably not different')
         return pairs
 
     @staticmethod
@@ -141,10 +152,10 @@ class RemoveDuplicates():
         :param extension: fileextension
         :return:
         """
-        logger.debug('getting structure list')
+        logger.info('getting structure list')
         if extension:
             structure_list = glob(
-                os.path.join(directory, ''.join([',.', extension])))
+                os.path.join(directory, ''.join(['*.', extension])))
         else:
             structure_list = glob(os.path.join(directory, '*'))
         return structure_list
@@ -167,8 +178,11 @@ class RemoveDuplicates():
         self.reduced_structure_list = RemoveDuplicates.get_structure_list(
             self.reduced_structure_dir)
 
-        self.scalar_feature_matrix = RemoveDuplicates.get_scalar_matrix(
+        self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df(
             self.reduced_structure_list)
+
+        logger.debug('columns of dataframe are {}'.format(
+            self.scalar_feature_matrix.columns))
 
         self.similar_composition_tuples = RemoveDuplicates.get_scalar_distance_matrix(
             self.scalar_feature_matrix)
@@ -181,14 +195,39 @@ class RemoveDuplicates():
         try:
             if self.pairs:
                 number_duplicates = len(self.pairs)
-        except NameError:
+            else:
+                number_duplicates = 0
+        except AttributeError:
             number_duplicates = None
         return number_duplicates
+
+    @property
+    def duplicates(self):
+        try:
+            if self.pairs:
+                duplicates = []
+                for items in self.pairs:
+                    name1 = Path(
+                        self.scalar_feature_matrix.iloc[items[0]]['name']).name
+                    name2 = Path(
+                        self.scalar_feature_matrix.iloc[items[1]]['name']).name
+                    duplicates.append((name1, name2))
+            else:
+                duplicates = 0
+        except AttributeError:
+            duplicates = None
+        return duplicates
 
     def inspect_duplicates(self, mode: str = 'ase'):
         if mode == 'ase':
             for items in self.pairs:
-                return NotImplementedError
+                fig, axarr = plt.subplots(1, 2, figsize=(15, 5))
+                plot_atoms(
+                    read(self.scalar_feature_matrix.iloc[items[0]]['name']),
+                    axarr[0])
+                plot_atoms(
+                    read(self.scalar_feature_matrix.iloc[items[1]]['name']),
+                    axarr[1])
 
     def remove_duplicates(self):
         return NotImplementedError
