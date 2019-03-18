@@ -150,7 +150,6 @@ class RemoveDuplicates():
         pairs = []
         for items in tqdm(tupellist):
             if items[0] != items[1]:
-
                 p_atoms, P, q_atoms, Q = parse_periodic_case(
                     scalar_feature_df.iloc[items[0]]['name'],
                     scalar_feature_df.iloc[items[1]]['name'])
