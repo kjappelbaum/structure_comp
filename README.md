@@ -8,6 +8,8 @@ in this space and then compare the structure graphs of composition duplicates.
 
 Alternatively, one can also use the [Kabsch algorithm](https://en.wikipedia.org/wiki/Kabsch_algorithm) for comparison of the composition duplicates.
 
+Moreover, a second module tries to implement comparatively cheap metrics for the assessment of database diversity. 
+
 ## Acknowledgment
 We build on prior work:
 

@@ -233,6 +233,14 @@ class RemoveDuplicates():
         self.pairs = RemoveDuplicates.compare_graphs(
             self.similar_composition_tuples, self.scalar_feature_matrix)
 
+    @staticmethod
+    def get_rmsd_matrix():
+        return NotImplementedError
+
+    @staticmethod
+    def get_jacard_graph_distance_matrix():
+        return NotImplementedError
+
     @property
     def number_of_duplicates(self):
         try:
