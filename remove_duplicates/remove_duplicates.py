@@ -10,11 +10,14 @@
 import os
 from pathlib import Path
 import numpy as np
+import shutil
 from glob import glob
 from pymatgen import Structure
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JMolNN
 from scipy.spatial.distance import pdist, squareform
+import logging
+from tqdm.autonotebook import tqdm
 import pandas as pd
 
 
@@ -52,8 +55,7 @@ class RemoveDuplicates():
     @staticmethod
     def get_scalar_matrix(reduced_structure_list):
         feature_list = []
-        for structure in reduced_structure_list:
-            #sname = Path(structure).name
+        for structure in tqdm(reduced_structure_list):
             number_atoms, density = RemoveDuplicates.get_scalar_features(
                 structure)
             features = {
@@ -90,7 +92,7 @@ class RemoveDuplicates():
         Filter structures with same structure graph
         """
         pairs = []
-        for items in tupellist:
+        for items in tqdm(tupellist):
             if items[0] != items[1]:
                 nn_strategy = JMolNN()
                 crystal_a = Structure.from_file(
@@ -115,6 +117,9 @@ class RemoveDuplicates():
             structure_list = glob(os.path.join(directory, '*'))
         return structure_list
 
+    def janitor(self):
+        shutil.rmtree(self.reduced_structure_dir)
+
     def run_filtering(self):
         """
         Runs the on the database.
@@ -134,6 +139,7 @@ class RemoveDuplicates():
 
         self.pairs = RemoveDuplicates.compare_graphs(
             self.similar_composition_tuples, self.scalar_feature_matrix)
+
 
     def inspect_duplicates(self):
         return NotImplementedError

@@ -9,6 +9,8 @@ setup(
     install_requires=[
         'numpy',
         'pymatgen',
+        'shutil',
+        'tqdm'
     ],
     extras_require={
         'testing': ['pytest'],
