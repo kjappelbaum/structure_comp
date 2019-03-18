@@ -23,6 +23,7 @@ from ase.io import read
 import matplotlib.pyplot as plt
 from tqdm.autonotebook import tqdm
 import pandas as pd
+from rmsd import parse_periodic_case, rmsd
 
 logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
@@ -37,6 +38,29 @@ class RemoveDuplicates():
         self.structure_list = structure_list
         self.reduced_structure_dir = reduced_structure_dir
         self.remove_rsd = remove_reduced_structure_dir
+        self.pairs = None
+
+    # Implement some logic in case someone wants to compare dbs
+    def __len__(self):
+        return len(self.pairs)
+
+    def __eq__(self, other):
+        return set(self.pairs) == set(other.pairs)
+
+    def __gt__(self, other):
+        return len(self.pairs) > len(other.pairs)
+
+    def __lt__(self, other):
+        return len(self.pairs) < len(other.pairs)
+
+    def __ge__(self, other):
+        return len(self.pairs) >= len(other.pairs)
+
+    def __le__(self, other):
+        return len(self.pairs) <= len(other.pairs)
+
+    def __iter__(self):
+        return iter(self.pairs)
 
     @staticmethod
     def get_reduced_structures(structure_list: list, new_dir: str):
@@ -108,13 +132,32 @@ class RemoveDuplicates():
         dist_matrix = squareform(distances)
         i, j = np.where(dist_matrix < threshold)
         logger.debug('found {} and {} composition duplicates'.format(i, j))
-        return list(set(map(tuple, map(sorted, list(zip(i, j)))))) # super ugly
+        return list(set(map(tuple, map(sorted, list(zip(i,
+                                                        j))))))  # super ugly
 
-    def compare_rmsd(self):
+    @staticmethod
+    def compare_rmsd(tupellist: list,
+                     scalar_feature_df: pd.DataFrame,
+                     threshold: float = 0.2) -> list:
         """
         Potentially, we could run the RMSD code to detect same structures
+        :param tupellist: list of tuples (indices of dataframe)
+        :param scalar_feature_df: dataframe that contains the name column
+        :param threshold: float for a RMSD structure distance threshold for consideration as duplicate
+        :return:
         """
-        return NotImplementedError
+        logger.info('doing RMSD comparison')
+        pairs = []
+        for items in tqdm(tupellist):
+            if items[0] != items[1]:
+
+                p_atoms, P, q_atoms, Q = parse_periodic_case(
+                    scalar_feature_df.iloc[items[0]]['name'],
+                    scalar_feature_df.iloc[items[1]]['name'])
+                result = rmsd(P, Q)
+                if result < threshold:
+                    pairs.append(items)
+        return pairs
 
     @staticmethod
     def compare_graphs(tupellist: list,
@@ -122,7 +165,7 @@ class RemoveDuplicates():
         """
         Filter structures with same structure graph
         :param tupellist: list of tuples (indices of dataframe)
-        :param scalar_feature_df: dataframe that containes the name column
+        :param scalar_feature_df: dataframe that contains the name column
         :return: list of tuples of structures that are identical
         """
         logger.info('constructing and comparing structure graphs')
@@ -220,14 +263,25 @@ class RemoveDuplicates():
 
     def inspect_duplicates(self, mode: str = 'ase'):
         if mode == 'ase':
-            for items in self.pairs:
-                fig, axarr = plt.subplots(1, 2, figsize=(15, 5))
-                plot_atoms(
-                    read(self.scalar_feature_matrix.iloc[items[0]]['name']),
-                    axarr[0])
-                plot_atoms(
-                    read(self.scalar_feature_matrix.iloc[items[1]]['name']),
-                    axarr[1])
+            if self.pairs:
+                for items in self.pairs:
+                    fig, axarr = plt.subplots(1, 2, figsize=(15, 5))
+                    plot_atoms(
+                        read(
+                            self.scalar_feature_matrix.iloc[items[0]]['name']),
+                        axarr[0])
+                    plot_atoms(
+                        read(
+                            self.scalar_feature_matrix.iloc[items[1]]['name']),
+                        axarr[1])
+            else:
+                logger.info('no duplicates to plot')
 
     def remove_duplicates(self):
-        return NotImplementedError
+        try:
+            for items in self.pairs:
+                os.remove(self.scalar_feature_matrix.iloc[items[0]]['name'])
+
+            # Should we now also clean the pair list?
+        except Exception:
+            logger.error('Could not delete duplicates')

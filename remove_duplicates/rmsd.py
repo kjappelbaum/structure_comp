@@ -6,11 +6,12 @@
 # directly copied from aforementioned repository
 
 import copy
-import re
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from scipy.spatial.distance import cdist
+from ase.io import read, write
+from ase.build import niggli_reduce
 
 AXIS_SWAPS = np.array([[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 1, 0],
                        [2, 0, 1]])
@@ -599,3 +600,47 @@ def print_coordinates(atoms, V, title=""):
     print(set_coordinates(atoms, V, title=title))
 
     return
+
+def parse_periodic_case(file_1, file_2):
+    atoms1 = read(file_1)
+    atoms2 = read(file_2)
+    niggli_reduce(atoms1)
+    niggli_reduce(atoms2)
+
+    a1, a2 = rescale_periodic_system(atoms1, atoms2)
+
+    atomic_symbols_1 = a1.get_chemical_symbols()
+    positions_1 = a1.get_positions()
+
+    atomic_symbols_2 = a2.get_chemical_symbols()
+    positions_2 = a2.get_positions()
+
+    return atomic_symbols_1, positions_1, atomic_symbols_2, positions_2
+
+def rescale_periodic_system(atoms1, atoms2):
+    """
+    Scales two periodic systems to the same size.
+    Not the most efficient implementation yet.
+
+    For a first implementation, I assume that the number
+    of atoms in both cells is the same. Later, I will
+    create supercells to fix this.
+
+    ToDo: First get Niggli cells for both structures
+
+    Parameters
+    ----------
+        atoms1: ASE atoms object
+        atoms2: ASE atoms object
+
+    Returns
+    --------
+        atoms1_copy: ASE atoms object
+        atoms2: ASE atoms object
+    """
+
+    #if len(atoms1) == len(atoms2):
+    atoms1_copy = atoms1.copy()
+    atoms1_copy.set_cell(atoms2.get_cell(), scale_atoms=True)
+
+    return atoms1_copy, atoms2
