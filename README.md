@@ -33,7 +33,10 @@ We make use of the following open-source libraries:
 * Give option for caching
 * use with `futures.ProcessPoolExecutor() as pool:` for multiprocessing in 
 the graph comparison loop 
-* Add class constructors from folder and AiiDA databases 
+* Add class constructors from folder and AiiDA databases, i.e. add useful hash for CifData objects
+* API design, especially for statistics module
+* Organization of statistics module, probably more efficient to create structures and structure graphs only once, 
+should probably save them to the object. 
 
 ## Installation
 For developers install in editable mode
