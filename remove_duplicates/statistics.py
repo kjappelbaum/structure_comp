@@ -11,9 +11,11 @@ from pymatgen.analysis.local_env import JmolNN
 from rmsd import parse_periodic_case, rmsd
 import random
 from scipy.spatial import distance
+from scipy import stats
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
+from sklearn.neighbors import KernelDensity
 logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
 
@@ -58,7 +60,8 @@ def closest_index(array, target):
     return np.argmin(np.abs(array - target))
 
 
-def property_based_distances(structure_list: list, property_list: list, other_structure: str) -> pd.DataFrame:
+def property_based_distances(structure_list: list, property_list: list,
+                             other_structure: str) -> pd.DataFrame:
     """
     Compares other structure to
         - lowest, highest, median, mean and random structure from structure list
@@ -95,7 +98,7 @@ def property_based_distances(structure_list: list, property_list: list, other_st
     nn_strategy = JmolNN()
 
     lowest_structure_graph = StructureGraph.with_local_env_strategy(
-            lowest_structure, nn_strategy)
+        lowest_structure, nn_strategy)
     highest_structure_graph = StructureGraph.with_local_env_strategy(
         highest_structure, nn_strategy)
     median_structure_graph = StructureGraph.with_local_env_strategy(
@@ -112,23 +115,85 @@ def property_based_distances(structure_list: list, property_list: list, other_st
         other_structure, nn_strategy)
 
     distances = {
-        'mean_rmsd': get_rmsd(other_structure, mean_structure),
-        'highest_rmsd': get_rmsd(other_structure, highest_structure),
-        'lowest_rmsd': get_rmsd(other_structure, lowest_structure),
-        'median_rmsd': get_rmsd(other_structure, median_structure),
-        'random_rmsd': get_rmsd(other_structure, random_structure),
-        'q25_rmsd': get_rmsd(other_structure, q25_structure),
-        'q75_rmsd': get_rmsd(other_structure, q75_structure),
-        'mean_jaccard': other_structure_graph.diff(mean_structure_graph, strict=False)['diff'],
-        'highest_jaccard': other_structure_graph.diff(highest_structure_graph, strict=False)['diff'],
-        'lowest_jaccard': other_structure_graph.diff(lowest_structure_graph, strict=False)['diff'],
-        'median_jaccard': other_structure_graph.diff(median_structure_graph, strict=False)['diff'],
-        'random_jaccard': other_structure_graph.diff(random_structure_graph, strict=False)['diff'],
-        'q25_jaccard': other_structure_graph.diff(q25_structure_graph, strict=False)['diff'],
-        'q75_jaccard': other_structure_graph.diff(q75_structure_graph, strict=False)['diff'],
+        'mean_rmsd':
+        get_rmsd(other_structure, mean_structure),
+        'highest_rmsd':
+        get_rmsd(other_structure, highest_structure),
+        'lowest_rmsd':
+        get_rmsd(other_structure, lowest_structure),
+        'median_rmsd':
+        get_rmsd(other_structure, median_structure),
+        'random_rmsd':
+        get_rmsd(other_structure, random_structure),
+        'q25_rmsd':
+        get_rmsd(other_structure, q25_structure),
+        'q75_rmsd':
+        get_rmsd(other_structure, q75_structure),
+        'mean_jaccard':
+        other_structure_graph.diff(mean_structure_graph, strict=False)['diff'],
+        'highest_jaccard':
+        other_structure_graph.diff(highest_structure_graph,
+                                   strict=False)['diff'],
+        'lowest_jaccard':
+        other_structure_graph.diff(lowest_structure_graph,
+                                   strict=False)['diff'],
+        'median_jaccard':
+        other_structure_graph.diff(median_structure_graph,
+                                   strict=False)['diff'],
+        'random_jaccard':
+        other_structure_graph.diff(random_structure_graph,
+                                   strict=False)['diff'],
+        'q25_jaccard':
+        other_structure_graph.diff(q25_structure_graph, strict=False)['diff'],
+        'q75_jaccard':
+        other_structure_graph.diff(q75_structure_graph, strict=False)['diff'],
     }
 
     return pd.DataFrame(distances)
+
+
+def kde_probability_observation(observations, other_observation) -> float:
+    """
+    Performs a KDE on the list of observation and the returns the
+    log likelihood of the data under the kde model
+    :param observations:
+    :param other_observation:
+    :return:
+    """
+    observations_array = np.array(observations)
+    other_observation_array = np.array(other_observation)
+    assert len(other_observation.shape) == len(observations_array.shape)
+
+    if len(observations_array.shape) == 1:
+        observations_array = observations_array.reshape(-1, 1)
+        other_observation_array = other_observation_array.reshape(-1, 1)
+
+    kd = KernelDensity(
+        kernel='gaussian', bandwidth=0.75).fit(observations_array)
+    return kd.score(other_observation_array)
+
+
+def kl_divergence(array_1, array_2):
+    """
+    KL divergence could be used a measure of covariate shift.
+    :param array_1:
+    :param array_2:
+    :return:
+    """
+
+    a = np.asarray(array_1, dtype=np.float)
+    a /= a.sum()
+    b = np.asarray(array_2, dtype=np.float)
+    b /= b.sum()
+
+    if len(a) > len(b):
+        np.random.shuffle(a)
+        a = a[:len(b)]
+    elif len(b) > len(a):
+        np.random.shuffle(b)
+        b = b[:len(a)]
+
+    return np.sum(np.where(a != 0, a * np.log(a / b), 0))
 
 
 def tanimoto_distance(array_1, array_2):
@@ -142,7 +207,8 @@ def tanimoto_distance(array_1, array_2):
     return xy / (np.abs(array_1) + np.abs(array_2) - xy)
 
 
-def fingerprint_based_distances(fingerprint_list, other_fingerprint, k=8):
+def fingerprint_based_distances(fingerprint_list, other_fingerprint,
+                                k=8) -> pd.DataFrame:
     """
     This comparator performes clustering in the fingerprint space and compares the distance
     of the other fingerprint to all clusters. This could be useful in a ML model to check
@@ -189,3 +255,43 @@ def fingerprint_based_distances(fingerprint_list, other_fingerprint, k=8):
         distances.append(distance_dict)
 
     return pd.DataFrame(distances)
+
+
+# MMD test taken from https://github.com/paruby/ml-basics/blob/master/Statistical%20Hypothesis%20Testing.ipynb
+def gaussian_kernel(z, length):
+    z = z[:, :, None]
+    pre_exp = ((z - z.T)**2).sum(axis=1)
+    return np.exp(-(pre_exp / length))
+
+
+def mmd(x, y, kernel, kernel_parameters):
+    n = len(x)
+    m = len(y)
+    z = np.concatenate([x, y])
+    k = kernel(z, kernel_parameters)
+
+    kxx = k[0:n, 0:n]
+    kxy = k[n:, 0:n]
+    kyy = k[n:, n:]
+
+    return (kxx.sum() / (n**2)) - (2 * kxy.sum() / (n * m)) + (kyy.sum() /
+                                                               (m**2))
+
+
+def mmd_test(x, y, kernel, kernel_parameters):
+    mmd_array = mmd(x, y, kernel, kernel_parameters)
+    n_samples = 100
+    null_dist = mmd_null(x, y, kernel, kernel_parameters, n_samples)
+    p_value = (null_dist[:, None] > mmd_array).sum() / float(n_samples)
+
+    return mmd_array, p_value
+
+
+def mmd_null(x, y, kernel, kernel_parameters, n_samples):
+    s = [False for _ in range(n_samples)]
+    z = np.concatenate([x, y])
+    for i in range(n_samples):
+        np.random.shuffle(z)
+        s[i] = mmd(z[0:len(x)], z[len(x):], kernel, kernel_parameters)
+    s = np.array(s)
+    return s
