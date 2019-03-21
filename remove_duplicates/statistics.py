@@ -5,10 +5,11 @@
 # Compare a structure to a database
 
 from tqdm.autonotebook import tqdm
+import logging
 from pymatgen import Structure
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
-from rmsd import parse_periodic_case, rmsd
+from .rmsd import parse_periodic_case, rmsd
 import random
 from scipy.spatial import distance
 from scipy import stats
@@ -48,7 +49,7 @@ def randomized_graphs(structure_list: list, iterations=5000) -> list:
             crystal_a, nn_strategy)
         sgraph_b = StructureGraph.with_local_env_strategy(
             crystal_b, nn_strategy)
-        diffs.append(sgraph_a.diff(sgraph_b, strict=False))
+        diffs.append(sgraph_a.diff(sgraph_b, strict=False)['dist'])
     return diffs
 
 
@@ -295,3 +296,16 @@ def mmd_null(x, y, kernel, kernel_parameters, n_samples):
         s[i] = mmd(z[0:len(x)], z[len(x):], kernel, kernel_parameters)
     s = np.array(s)
     return s
+
+
+def get_hash(structure):
+    """
+    This gets hash for the Niggli reduced cell
+    :return:
+    """
+    crystal = structure.get_reduced_structure()
+    nn_strategy = JmolNN()
+    sgraph_a = StructureGraph.with_local_env_strategy(
+        crystal, nn_strategy)
+    hash = hash(sgraph_a.graph)
+    return hash

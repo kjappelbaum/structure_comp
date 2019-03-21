@@ -23,7 +23,7 @@ from ase.io import read
 import matplotlib.pyplot as plt
 from tqdm.autonotebook import tqdm
 import pandas as pd
-from rmsd import parse_periodic_case, rmsd
+from .rmsd import parse_periodic_case, rmsd
 
 logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
