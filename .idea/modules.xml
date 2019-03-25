@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/remove_duplicates.iml" filepath="$PROJECT_DIR$/.idea/remove_duplicates.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/structure_comp.iml" filepath="$PROJECT_DIR$/.idea/structure_comp.iml" />
     </modules>
   </component>
 </project>

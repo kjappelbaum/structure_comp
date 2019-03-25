@@ -1,9 +1,9 @@
 from setuptools import setup
 
 setup(
-    name='remove_duplicates',
+    name='structure_comp',
     version='0.1',
-    packages=['remove_duplicates'],
+    packages=['structure_comp'],
     url='',
     license='MIT License',
     install_requires=[
