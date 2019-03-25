@@ -17,6 +17,7 @@ from concurrent import futures
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
 from scipy.spatial.distance import pdist, squareform
+import tempfile
 import logging
 from ase.visualize.plot import plot_atoms
 from ase.io import read
@@ -25,7 +26,7 @@ from tqdm.autonotebook import tqdm
 import pandas as pd
 from .rmsd import parse_periodic_case, rmsd
 from .utils import get_structure_list
-from .statistics import get_hash
+from .comparators import get_hash
 from collections import defaultdict
 
 logger = logging.getLogger('RemoveDuplicates')
@@ -33,27 +34,43 @@ logger.setLevel(logging.DEBUG)
 
 
 class RemoveDuplicates():
+    """
+    A RemoveDuplicates object operates on a collection of structure and allows
+        - Removal of duplicates on the collection of structures using different methods
+        - Basic comparisons between different RemoveDuplicates objects (e.g. comparing which one contains more duplicates)
+    """
     def __init__(self,
                  structure_list: list,
-                 reduced_structure_dir: str,
-                 remove_reduced_structure_dir: bool = True,
+                 cached: bool = False,
                  method='standard'):
 
         self.structure_list = structure_list
-        self.reduced_structure_dir = reduced_structure_dir
-        self.remove_rsd = remove_reduced_structure_dir
+        self.reduced_structure_dict = {}
+        self.cached = cached
         self.pairs = None
         self.method = method
 
     @classmethod
     def from_folder(class_object,
                     folder,
-                    reduced_structure_dir: str,
+                    cached: bool = False,
                     extension='.cif',
                     remove_reduced_structure_dir: bool = True,
                     method='standard'):
+        """
+
+        Args:
+            folder (str): path to folder that is used for construction of the RemoveDuplicates object
+            reduced_structure_dir (str): name in which tempera
+            extension:
+            remove_reduced_structure_dir:
+            method:
+
+        Returns:
+
+        """
         sl = get_structure_list(folder, extension)
-        return class_object(sl, reduced_structure_dir,
+        return class_object(sl, cached,
                             remove_reduced_structure_dir, method)
 
     # Implement some logic in case someone wants to compare dbs
@@ -78,32 +95,34 @@ class RemoveDuplicates():
     def __iter__(self):
         return iter(self.pairs)
 
-    @staticmethod
-    def get_reduced_structures(structure_list: list, new_dir: str):
+    def get_reduced_structures(self):
         """
-        To make feature calculation cheaper and to
-        avoid issues with supercells.
-        :param structure_list: list of paths to structure files (format that pymatgen can read)
-        :param new_dir:  string with the name of the new directory for the reduced structures
-        :return:
+        To make calculations cheaper, we first get Niggli cells.
+        If caching is turned off, the structures are written to a temporary directory (useful for large
+        databases), otherwise the reduced structures are stored in memory.
         """
-        if not os.path.exists(new_dir):
-            os.makedirs(new_dir)
+        if not self.cached:
+            self.tempdirpath = tempfile.mkdtemp()
         logger.info('creating reduced structures')
-        for structure in tqdm(structure_list):
+        for structure in tqdm(self.structure_list):
             sname = Path(structure).name
+            stem = Path(structure).stem
             crystal = Structure.from_file(structure)
             crystal = crystal.get_reduced_structure()
-            crystal.to(filename=os.path.join(new_dir, sname))
+            if not self.cached:
+                crystal.to(filename=os.path.join(self.tempdirpath, sname))
+            else:
+                self.reduced_structure_dict[stem] = crystal
 
     @staticmethod
     def get_scalar_features(structure: Structure):
         """
-        Get features for the first comparison matrix.
-        :param structure: pymatgen structure object
-        :return:
-            number_atoms: float
-            density: float
+        Computes number of atoms and density for a pymatgen structure object.
+        Args:
+            structure:
+
+        Returns:
+
         """
         number_atoms = structure.num_sites
         density = structure.density
@@ -112,14 +131,42 @@ class RemoveDuplicates():
     @staticmethod
     def get_scalar_df(reduced_structure_list: list):
         """
-        Collect scalar features in a dataframe
-        :param reduced_structure_list: list of paths to reduced structures
-        :return: pandas dataframe with scalar features (currently name, number of atoms and density)
+
+        Args:
+            reduced_structure_list:
+
+        Returns:
+
         """
         feature_list = []
         logger.info('creating scalar features')
         for structure in tqdm(reduced_structure_list):
             crystal = Structure.from_file(structure)
+            number_atoms, density = RemoveDuplicates.get_scalar_features(
+                crystal)
+            features = {
+                'name': structure,
+                'number_atoms': number_atoms,
+                'density': density
+            }
+            feature_list.append(features)
+
+        return pd.DataFrame(feature_list)
+
+    @staticmethod
+    def get_scalar_df_cached(reduced_structure_dict: dict):
+        """
+
+        Args:
+            reduced_structure_dict:
+
+        Returns:
+
+        """
+        feature_list = []
+        logger.info('creating scalar features')
+        for structure in tqdm(reduced_structure_dict):
+            crystal = reduced_structure_dict[structure]
             number_atoms, density = RemoveDuplicates.get_scalar_features(
                 crystal)
             features = {
@@ -156,11 +203,14 @@ class RemoveDuplicates():
                      scalar_feature_df: pd.DataFrame,
                      threshold: float = 0.2) -> list:
         """
-        Potentially, we could run the RMSD code to detect same structures
-        :param tupellist: list of tuples (indices of dataframe)
-        :param scalar_feature_df: dataframe that contains the name column
-        :param threshold: float for a RMSD structure distance threshold for consideration as duplicate
-        :return:
+
+        Args:
+            tupellist:
+            scalar_feature_df:
+            threshold:
+
+        Returns:
+
         """
         logger.info('doing RMSD comparison')
         pairs = []
@@ -178,10 +228,13 @@ class RemoveDuplicates():
     def compare_graphs(tupellist: list,
                        scalar_feature_df: pd.DataFrame) -> list:
         """
-        Filter structures with same structure graph
-        :param tupellist: list of tuples (indices of dataframe)
-        :param scalar_feature_df: dataframe that contains the name column
-        :return: list of tuples of structures that are identical
+
+        Args:
+            tupellist:
+            scalar_feature_df:
+
+        Returns:
+
         """
         logger.info('constructing and comparing structure graphs')
         pairs = []
@@ -205,7 +258,7 @@ class RemoveDuplicates():
 
     def janitor(self):
         logger.debug('cleaning directory up')
-        shutil.rmtree(self.reduced_structure_dir)
+        shutil.rmtree(self.tempdirpath)
 
     @staticmethod
     def get_graph_hash_dict(structure_list: list):
@@ -219,17 +272,17 @@ class RemoveDuplicates():
 
     def run_filtering(self):
         """
-        Runs the on the database.
-        :return:
-        """
+        
+        Returns:
 
+        """
         logger.info('running filtering workflow')
 
         if self.method == 'standard':
-            RemoveDuplicates.get_reduced_structures(self.structure_list,
-                                                    self.reduced_structure_dir)
+            RemoveDuplicates.get_reduced_structures()
 
-            self.reduced_structure_list = get_structure_list(
+            if not self.cached:
+                self.reduced_structure_list = get_structure_list(
                 self.reduced_structure_dir)
 
             self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df(

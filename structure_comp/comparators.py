@@ -54,7 +54,7 @@ class DistExampleComparison():
         sl = get_structure_list(folder, extension)
         return class_object(folder, file)
 
-##### Need to put this code in some separate module / class
+
 def get_rmsd(structure_a: Structure, structure_b: Structure) -> float:
     p_atoms, P, q_atoms, Q = parse_periodic_case(structure_a, structure_b)
     result = rmsd(P, Q)
@@ -63,7 +63,6 @@ def get_rmsd(structure_a: Structure, structure_b: Structure) -> float:
 
 def randomized_rmsd(structure_list: list, iterations: float = 5000) -> list:
     rmsds = []
-
     for _ in tqdm(range(iterations)):
         random_selection = random.sample(structure_list, 2)
         a = get_rmsd(random_selection[0], random_selection[1])
@@ -87,8 +86,22 @@ def randomized_graphs(structure_list: list, iterations=5000) -> list:
     return diffs
 
 
-def randomized_density():
-    ...
+
+
+def randomized_structure_property(structure_list: list, property='density', iterations=5000) -> list:
+    diffs = []
+    for _ in tqdm(range(iterations)):
+        random_selection = random.sample(structure_list, 2)
+        crystal_a = Structure.from_file(random_selection[0])
+        crystal_b = Structure.from_file(random_selection[1])
+        if property == 'density':
+            diff = np.abs(crystal_a.density - crystal_b.density)
+        elif property == 'num_sites':
+            diff = np.abs(crystal_a.num_sites - crystal_b.num_sites)
+        elif property == 'volume':
+            diff = np.abs(crystal_a.volume - crystal_b.volume)
+        diffs.append(diff)
+    return diffs
 
 
 def closest_index(array, target):
