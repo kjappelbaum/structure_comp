@@ -10,6 +10,7 @@ from pymatgen import Structure
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
 from .rmsd import parse_periodic_case, rmsd
+from .utils import get_structure_list
 import random
 from scipy.spatial import distance
 from scipy import stats
@@ -21,6 +22,39 @@ logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
 
 
+class DistStatistic():
+    def __init__(self, structure_list):
+        self.structure_list = structure_list
+
+    @classmethod
+    def from_folder(class_object, folder, extension='.cif'):
+        sl = get_structure_list(folder, extension)
+        return class_object(sl)
+
+
+class DistComparison():
+    def __init__(self, structure_list_1, structure_list_2):
+        self.structure_list_1 = structure_list_1
+        self.structure_list_2 = structure_list_2
+
+    @classmethod
+    def from_folders(class_object, folder_1, folder_2, extension='.cif'):
+        sl_1 = get_structure_list(folder_1, extension)
+        sl_2 = get_structure_list(folder_2, extension)
+        return class_object(sl_1, sl_2)
+
+
+class DistExampleComparison():
+    def __init__(self, structure_list, file):
+        self.structure_list = structure_list
+        self.file = file
+
+    @classmethod
+    def from_folder_and_file(class_object, folder, file, extension='.cif'):
+        sl = get_structure_list(folder, extension)
+        return class_object(folder, file)
+
+##### Need to put this code in some separate module / class
 def get_rmsd(structure_a: Structure, structure_b: Structure) -> float:
     p_atoms, P, q_atoms, Q = parse_periodic_case(structure_a, structure_b)
     result = rmsd(P, Q)
@@ -298,14 +332,15 @@ def mmd_null(x, y, kernel, kernel_parameters, n_samples):
     return s
 
 
-def get_hash(structure):
+def get_hash(structure: Structure):
     """
     This gets hash for the Niggli reduced cell
     :return:
     """
     crystal = structure.get_reduced_structure()
     nn_strategy = JmolNN()
-    sgraph_a = StructureGraph.with_local_env_strategy(
-        crystal, nn_strategy)
-    hash = hash(sgraph_a.graph)
-    return hash
+    sgraph_a = StructureGraph.with_local_env_strategy(crystal, nn_strategy)
+    graph_hash = str(hash(sgraph_a.graph))
+    comp_hash = str(hash(str(crystal.composition)))
+    density_hash = str(hash(crystal.density))
+    return graph_hash + comp_hash + density_hash

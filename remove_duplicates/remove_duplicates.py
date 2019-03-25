@@ -24,6 +24,9 @@ import matplotlib.pyplot as plt
 from tqdm.autonotebook import tqdm
 import pandas as pd
 from .rmsd import parse_periodic_case, rmsd
+from .utils import get_structure_list
+from .statistics import get_hash
+from collections import defaultdict
 
 logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
@@ -33,12 +36,25 @@ class RemoveDuplicates():
     def __init__(self,
                  structure_list: list,
                  reduced_structure_dir: str,
-                 remove_reduced_structure_dir: bool = True):
+                 remove_reduced_structure_dir: bool = True,
+                 method='standard'):
 
         self.structure_list = structure_list
         self.reduced_structure_dir = reduced_structure_dir
         self.remove_rsd = remove_reduced_structure_dir
         self.pairs = None
+        self.method = method
+
+    @classmethod
+    def from_folder(class_object,
+                    folder,
+                    reduced_structure_dir: str,
+                    extension='.cif',
+                    remove_reduced_structure_dir: bool = True,
+                    method='standard'):
+        sl = get_structure_list(folder, extension)
+        return class_object(sl, reduced_structure_dir,
+                            remove_reduced_structure_dir, method)
 
     # Implement some logic in case someone wants to compare dbs
     def __len__(self):
@@ -187,24 +203,19 @@ class RemoveDuplicates():
                     logger.debug('Structures were probably not different')
         return pairs
 
-    @staticmethod
-    def get_structure_list(directory: str, extension: str = 'cif') -> list:
-        """
-        :param directory: path to directory
-        :param extension: fileextension
-        :return:
-        """
-        logger.info('getting structure list')
-        if extension:
-            structure_list = glob(
-                os.path.join(directory, ''.join(['*.', extension])))
-        else:
-            structure_list = glob(os.path.join(directory, '*'))
-        return structure_list
-
     def janitor(self):
         logger.debug('cleaning directory up')
         shutil.rmtree(self.reduced_structure_dir)
+
+    @staticmethod
+    def get_graph_hash_dict(structure_list: list):
+        hash_dict = defaultdict(list)
+        for structure in structure_list:
+            crystal = Structure.from_file(structure)
+            name = Path(structure).name
+            hash = get_hash(crystal)
+            hash_dict[hash].append(name)
+        return hash_dict
 
     def run_filtering(self):
         """
@@ -214,23 +225,27 @@ class RemoveDuplicates():
 
         logger.info('running filtering workflow')
 
-        RemoveDuplicates.get_reduced_structures(self.structure_list,
-                                                self.reduced_structure_dir)
+        if self.method == 'standard':
+            RemoveDuplicates.get_reduced_structures(self.structure_list,
+                                                    self.reduced_structure_dir)
 
-        self.reduced_structure_list = RemoveDuplicates.get_structure_list(
-            self.reduced_structure_dir)
+            self.reduced_structure_list = get_structure_list(
+                self.reduced_structure_dir)
 
-        self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df(
-            self.reduced_structure_list)
+            self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df(
+                self.reduced_structure_list)
 
-        logger.debug('columns of dataframe are {}'.format(
-            self.scalar_feature_matrix.columns))
+            logger.debug('columns of dataframe are {}'.format(
+                self.scalar_feature_matrix.columns))
 
-        self.similar_composition_tuples = RemoveDuplicates.get_scalar_distance_matrix(
-            self.scalar_feature_matrix)
+            self.similar_composition_tuples = RemoveDuplicates.get_scalar_distance_matrix(
+                self.scalar_feature_matrix)
 
-        self.pairs = RemoveDuplicates.compare_graphs(
-            self.similar_composition_tuples, self.scalar_feature_matrix)
+            self.pairs = RemoveDuplicates.compare_graphs(
+                self.similar_composition_tuples, self.scalar_feature_matrix)
+
+        elif self.method == 'graph_hash':
+            RemoveDuplicates.get_graph_hash_dict(self.structure_list)
 
     @staticmethod
     def get_rmsd_matrix():
