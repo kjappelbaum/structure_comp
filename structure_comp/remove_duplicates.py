@@ -261,6 +261,25 @@ class RemoveDuplicates():
             logger.debug('Structures were probably not different')
             return None
 
+    def compare_graph_pair_cached(self, items, scalar_feature_df):
+
+        nn_strategy = JmolNN()
+        crystal_a = self.reduced_structure_dict[
+            scalar_feature_df.iloc[items[0]]['name'])]
+        crystal_b = self.reduced_structure_dict[
+            scalar_feature_df.iloc[items[1]]['name'])]
+        sgraph_a = StructureGraph.with_local_env_strategy(
+            crystal_a, nn_strategy)
+        sgraph_b = StructureGraph.with_local_env_strategy(
+            crystal_b, nn_strategy)
+        try:
+            if sgraph_a == sgraph_b:
+                return items
+        except ValueError:
+            logger.debug('Structures were probably not different')
+            return None
+
+
     @staticmethod
     def compare_graphs(tupellist: list,
                        scalar_feature_df: pd.DataFrame) -> list:

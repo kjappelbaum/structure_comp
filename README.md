@@ -1,4 +1,7 @@
 # Remove duplicates
+
+*Docs will be hosted at https://structure-comp.readthedocs.io/en/latest/index.html.*
+
 Small python package to efficiently remove duplicates from larger 
 structure databases. The main goal is to have something that is not $\mathcal{O}(N^2)$ 
 and works without a lot of threshold optimization. 
