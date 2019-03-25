@@ -13,7 +13,7 @@ import numpy as np
 import shutil
 from glob import glob
 from pymatgen import Structure
-from concurrent import futures
+import concurrent.futures
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
 from scipy.spatial.distance import pdist, squareform
@@ -39,6 +39,7 @@ class RemoveDuplicates():
         - Removal of duplicates on the collection of structures using different methods
         - Basic comparisons between different RemoveDuplicates objects (e.g. comparing which one contains more duplicates)
     """
+
     def __init__(self,
                  structure_list: list,
                  cached: bool = False,
@@ -70,8 +71,7 @@ class RemoveDuplicates():
 
         """
         sl = get_structure_list(folder, extension)
-        return class_object(sl, cached,
-                            remove_reduced_structure_dir, method)
+        return class_object(sl, cached, remove_reduced_structure_dir, method)
 
     # Implement some logic in case someone wants to compare dbs
     def __len__(self):
@@ -129,6 +129,21 @@ class RemoveDuplicates():
         return number_atoms, density
 
     @staticmethod
+    def get_scalar_features_from_file(structure_file):
+        """
+        Computes number of atoms and density for structure file.
+        Args:
+            structure_file:
+
+        Returns:
+
+        """
+        structure = Structure.from_file(structure_file)
+        number_atoms = structure.num_sites
+        density = structure.density
+        return number_atoms, density
+
+    @staticmethod
     def get_scalar_df(reduced_structure_list: list):
         """
 
@@ -140,16 +155,19 @@ class RemoveDuplicates():
         """
         feature_list = []
         logger.info('creating scalar features')
-        for structure in tqdm(reduced_structure_list):
-            crystal = Structure.from_file(structure)
-            number_atoms, density = RemoveDuplicates.get_scalar_features(
-                crystal)
-            features = {
-                'name': structure,
-                'number_atoms': number_atoms,
-                'density': density
-            }
-            feature_list.append(features)
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            for structure, number_atoms, density in tqdm(executor.map(
+                    RemoveDuplicates.get_scalar_features_from_file,
+                    reduced_structure_list), total=len(reduced_structure_list)):
+                number_atoms, density = RemoveDuplicates.get_scalar_features(
+                    structure)
+                features = {
+                    'name': structure,
+                    'number_atoms': number_atoms,
+                    'density': density
+                }
+                feature_list.append(features)
 
         return pd.DataFrame(feature_list)
 
@@ -225,6 +243,25 @@ class RemoveDuplicates():
         return pairs
 
     @staticmethod
+    def compare_graph_pair(items, scalar_feature_df):
+
+        nn_strategy = JmolNN()
+        crystal_a = Structure.from_file(
+            scalar_feature_df.iloc[items[0]]['name'])
+        crystal_b = Structure.from_file(
+            scalar_feature_df.iloc[items[1]]['name'])
+        sgraph_a = StructureGraph.with_local_env_strategy(
+            crystal_a, nn_strategy)
+        sgraph_b = StructureGraph.with_local_env_strategy(
+            crystal_b, nn_strategy)
+        try:
+            if sgraph_a == sgraph_b:
+                return items
+        except ValueError:
+            logger.debug('Structures were probably not different')
+            return None
+
+    @staticmethod
     def compare_graphs(tupellist: list,
                        scalar_feature_df: pd.DataFrame) -> list:
         """
@@ -238,22 +275,13 @@ class RemoveDuplicates():
         """
         logger.info('constructing and comparing structure graphs')
         pairs = []
-        for items in tqdm(tupellist):
-            if items[0] != items[1]:
-                nn_strategy = JmolNN()
-                crystal_a = Structure.from_file(
-                    scalar_feature_df.iloc[items[0]]['name'])
-                crystal_b = Structure.from_file(
-                    scalar_feature_df.iloc[items[1]]['name'])
-                sgraph_a = StructureGraph.with_local_env_strategy(
-                    crystal_a, nn_strategy)
-                sgraph_b = StructureGraph.with_local_env_strategy(
-                    crystal_b, nn_strategy)
-                try:
-                    if sgraph_a == sgraph_b:
-                        pairs.append(items)
-                except ValueError:
-                    logger.debug('Structures were probably not different')
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            for items, result in tqdm(
+                    executor.map(RemoveDuplicates.compare_graph_pair,
+                                 tupellist, scalar_feature_df),
+                    total=len(tupellist)):
+                if result:
+                    pairs.append(result)
         return pairs
 
     def janitor(self):
@@ -272,7 +300,7 @@ class RemoveDuplicates():
 
     def run_filtering(self):
         """
-        
+
         Returns:
 
         """
@@ -283,7 +311,7 @@ class RemoveDuplicates():
 
             if not self.cached:
                 self.reduced_structure_list = get_structure_list(
-                self.reduced_structure_dir)
+                    self.reduced_structure_dir)
 
             self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df(
                 self.reduced_structure_list)
