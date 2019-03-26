@@ -16,6 +16,7 @@ setup(
     ],
     extras_require={
         'testing': ['pytest'],
+        'docs': ['sphinx-rtd-theme', 'sphinxcontrib-bibtex'],
         'pre-commit': [
             'pre-commit==1.11.0', 'yapf==0.24.0', 'prospector==1.1.5',
             'pylint==1.9.3'
