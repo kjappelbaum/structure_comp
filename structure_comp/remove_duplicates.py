@@ -157,9 +157,11 @@ class RemoveDuplicates():
         logger.info('creating scalar features')
 
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            for structure, number_atoms, density in tqdm(executor.map(
-                    RemoveDuplicates.get_scalar_features_from_file,
-                    reduced_structure_list), total=len(reduced_structure_list)):
+            for structure, number_atoms, density in tqdm(
+                    executor.map(
+                        RemoveDuplicates.get_scalar_features_from_file,
+                        reduced_structure_list),
+                    total=len(reduced_structure_list)):
                 number_atoms, density = RemoveDuplicates.get_scalar_features(
                     structure)
                 features = {
@@ -264,10 +266,10 @@ class RemoveDuplicates():
     def compare_graph_pair_cached(self, items, scalar_feature_df):
 
         nn_strategy = JmolNN()
-        crystal_a = self.reduced_structure_dict[
-            scalar_feature_df.iloc[items[0]]['name'])]
-        crystal_b = self.reduced_structure_dict[
-            scalar_feature_df.iloc[items[1]]['name'])]
+        crystal_a = self.reduced_structure_dict[scalar_feature_df.iloc[
+            items[0]]['name']]
+        crystal_b = self.reduced_structure_dict[scalar_feature_df.iloc[
+            items[1]]['name']]
         sgraph_a = StructureGraph.with_local_env_strategy(
             crystal_a, nn_strategy)
         sgraph_b = StructureGraph.with_local_env_strategy(
@@ -279,9 +281,7 @@ class RemoveDuplicates():
             logger.debug('Structures were probably not different')
             return None
 
-
-    @staticmethod
-    def compare_graphs(tupellist: list,
+    def compare_graphs(self, tupellist: list,
                        scalar_feature_df: pd.DataFrame) -> list:
         """
 
@@ -295,12 +295,21 @@ class RemoveDuplicates():
         logger.info('constructing and comparing structure graphs')
         pairs = []
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            for items, result in tqdm(
-                    executor.map(RemoveDuplicates.compare_graph_pair,
-                                 tupellist, scalar_feature_df),
-                    total=len(tupellist)):
-                if result:
-                    pairs.append(result)
+            if not self.cached:
+                for items, result in tqdm(
+                        executor.map(RemoveDuplicates.compare_graph_pair,
+                                     tupellist, scalar_feature_df),
+                        total=len(tupellist)):
+                    if result:
+                        pairs.append(result)
+            else:
+                for items, result in tqdm(
+                        executor.map(
+                            RemoveDuplicates.compare_graph_pair_cached,
+                            tupellist, scalar_feature_df),
+                        total=len(tupellist)):
+                    if result:
+                        pairs.append(result)
         return pairs
 
     def janitor(self):
