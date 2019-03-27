@@ -264,7 +264,6 @@ class RemoveDuplicates():
             return None
 
     def compare_graph_pair_cached(self, items, scalar_feature_df):
-
         nn_strategy = JmolNN()
         crystal_a = self.reduced_structure_dict[scalar_feature_df.iloc[
             items[0]]['name']]

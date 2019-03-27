@@ -10,16 +10,21 @@ from pymatgen import Structure
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
 from .rmsd import parse_periodic_case, rmsd
-from .utils import get_structure_list
+from .utils import get_structure_list, get_rmsd
 import random
 from scipy.spatial import distance
 from scipy import stats
+from sklearn import metrics
 import numpy as np
+import functools
 import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.neighbors import KernelDensity
+from scipy.spatial import KDTree
+
 logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
+
 
 
 class DistStatistic():
@@ -30,6 +35,45 @@ class DistStatistic():
     def from_folder(class_object, folder, extension='.cif'):
         sl = get_structure_list(folder, extension)
         return class_object(sl)
+
+    def randomized_graphs(self, iterations=5000) -> list:
+        diffs = []
+        for _ in tqdm(range(iterations)):
+            random_selection = random.sample(self.structure_list, 2)
+            crystal_a = Structure.from_file(random_selection[0])
+            crystal_b = Structure.from_file(random_selection[1])
+            nn_strategy = JmolNN()
+            sgraph_a = StructureGraph.with_local_env_strategy(
+                crystal_a, nn_strategy)
+            sgraph_b = StructureGraph.with_local_env_strategy(
+                crystal_b, nn_strategy)
+            diffs.append(sgraph_a.diff(sgraph_b, strict=False)['dist'])
+        return diffs
+
+    def randomized_structure_property(self, property='density', iterations=5000) -> list:
+        diffs = []
+        for _ in tqdm(range(iterations)):
+            random_selection = random.sample(self.structure_list, 2)
+            crystal_a = Structure.from_file(random_selection[0])
+            crystal_b = Structure.from_file(random_selection[1])
+            if property == 'density':
+                diff = np.abs(crystal_a.density - crystal_b.density)
+            elif property == 'num_sites':
+                diff = np.abs(crystal_a.num_sites - crystal_b.num_sites)
+            elif property == 'volume':
+                diff = np.abs(crystal_a.volume - crystal_b.volume)
+            diffs.append(diff)
+        return diffs
+
+    def randomized_rmsd(self, iterations: float = 5000) -> list:
+        rmsds = []
+        for _ in tqdm(range(iterations)):
+            random_selection = random.sample(self.structure_list, 2)
+            a = get_rmsd(random_selection[0], random_selection[1])
+            rmsds.append(a)
+
+        return rmsds
+
 
 
 class DistComparison():
@@ -52,207 +96,101 @@ class DistExampleComparison():
     @classmethod
     def from_folder_and_file(class_object, folder, file, extension='.cif'):
         sl = get_structure_list(folder, extension)
-        return class_object(folder, file)
+        return class_object(sl, file)
 
+    def property_based_distances(self, property_list: list) -> pd.DataFrame:
+        """
+        Compares other structure to
+            - lowest, highest, median, mean and random structure from structure list
 
-def get_rmsd(structure_a: Structure, structure_b: Structure) -> float:
-    p_atoms, P, q_atoms, Q = parse_periodic_case(structure_a, structure_b)
-    result = rmsd(P, Q)
-    return result
+        Returns the RMSD and the graph jaccard distance between other structure and the
+        aforementioned structures.
 
+        This can be useful in case there is a direct link between structure and property
+        and we want to make sure that a structure is not to dissimilar from the set of structures
+        in structure_list.
+        Args:
+            property_list:
 
-def randomized_rmsd(structure_list: list, iterations: float = 5000) -> list:
-    rmsds = []
-    for _ in tqdm(range(iterations)):
-        random_selection = random.sample(structure_list, 2)
-        a = get_rmsd(random_selection[0], random_selection[1])
-        rmsds.append(a)
+        Returns:
 
-    return rmsds
+        """
 
+        median_index = closest_index(property_list, np.median(property_list))
+        mean_index = closest_index(property_list, np.mean(property_list))
+        random_index = np.random.randint(0, len(self.structure_list))
+        q25_index = closest_index(property_list, np.quantile(property_list, 0.25))
+        q75_index = closest_index(property_list, np.quantile(property_list, 0.75))
 
-def randomized_graphs(structure_list: list, iterations=5000) -> list:
-    diffs = []
-    for _ in tqdm(range(iterations)):
-        random_selection = random.sample(structure_list, 2)
-        crystal_a = Structure.from_file(random_selection[0])
-        crystal_b = Structure.from_file(random_selection[1])
+        lowest_structure = Structure.from_file(
+            self.structure_list[np.argmin(property_list)])
+        highest_structure = Structure.from_file(
+            self.structure_list[np.argmax(property_list)])
+        median_structure = Structure.from_file(self.structure_list[median_index])
+        mean_structure = Structure.from_file(self.structure_list[mean_index])
+        random_structure = Structure.from_file(self.structure_list[random_index])
+        q25_structure = Structure.from_file(self.structure_list[q25_index])
+        q75_structure = Structure.from_file(self.structure_list[q75_index])
+        other_structure = Structure.from_file(self.file)
+
         nn_strategy = JmolNN()
-        sgraph_a = StructureGraph.with_local_env_strategy(
-            crystal_a, nn_strategy)
-        sgraph_b = StructureGraph.with_local_env_strategy(
-            crystal_b, nn_strategy)
-        diffs.append(sgraph_a.diff(sgraph_b, strict=False)['dist'])
-    return diffs
+
+        lowest_structure_graph = StructureGraph.with_local_env_strategy(
+            lowest_structure, nn_strategy)
+        highest_structure_graph = StructureGraph.with_local_env_strategy(
+            highest_structure, nn_strategy)
+        median_structure_graph = StructureGraph.with_local_env_strategy(
+            median_structure, nn_strategy)
+        mean_structure_graph = StructureGraph.with_local_env_strategy(
+            mean_structure, nn_strategy)
+        random_structure_graph = StructureGraph.with_local_env_strategy(
+            random_structure, nn_strategy)
+        q25_structure_graph = StructureGraph.with_local_env_strategy(
+            q25_structure, nn_strategy)
+        q75_structure_graph = StructureGraph.with_local_env_strategy(
+            q75_structure, nn_strategy)
+        other_structure_graph = StructureGraph.with_local_env_strategy(
+            other_structure, nn_strategy)
+
+        distances = {
+            'mean_rmsd':
+                get_rmsd(other_structure, mean_structure),
+            'highest_rmsd':
+                get_rmsd(other_structure, highest_structure),
+            'lowest_rmsd':
+                get_rmsd(other_structure, lowest_structure),
+            'median_rmsd':
+                get_rmsd(other_structure, median_structure),
+            'random_rmsd':
+                get_rmsd(other_structure, random_structure),
+            'q25_rmsd':
+                get_rmsd(other_structure, q25_structure),
+            'q75_rmsd':
+                get_rmsd(other_structure, q75_structure),
+            'mean_jaccard':
+                other_structure_graph.diff(mean_structure_graph, strict=False)['diff'],
+            'highest_jaccard':
+                other_structure_graph.diff(highest_structure_graph,
+                                           strict=False)['diff'],
+            'lowest_jaccard':
+                other_structure_graph.diff(lowest_structure_graph,
+                                           strict=False)['diff'],
+            'median_jaccard':
+                other_structure_graph.diff(median_structure_graph,
+                                           strict=False)['diff'],
+            'random_jaccard':
+                other_structure_graph.diff(random_structure_graph,
+                                           strict=False)['diff'],
+            'q25_jaccard':
+                other_structure_graph.diff(q25_structure_graph, strict=False)['diff'],
+            'q75_jaccard':
+                other_structure_graph.diff(q75_structure_graph, strict=False)['diff'],
+        }
+
+        return pd.DataFrame(distances)
 
 
 
-
-def randomized_structure_property(structure_list: list, property='density', iterations=5000) -> list:
-    diffs = []
-    for _ in tqdm(range(iterations)):
-        random_selection = random.sample(structure_list, 2)
-        crystal_a = Structure.from_file(random_selection[0])
-        crystal_b = Structure.from_file(random_selection[1])
-        if property == 'density':
-            diff = np.abs(crystal_a.density - crystal_b.density)
-        elif property == 'num_sites':
-            diff = np.abs(crystal_a.num_sites - crystal_b.num_sites)
-        elif property == 'volume':
-            diff = np.abs(crystal_a.volume - crystal_b.volume)
-        diffs.append(diff)
-    return diffs
-
-
-def closest_index(array, target):
-    return np.argmin(np.abs(array - target))
-
-
-def property_based_distances(structure_list: list, property_list: list,
-                             other_structure: str) -> pd.DataFrame:
-    """
-    Compares other structure to
-        - lowest, highest, median, mean and random structure from structure list
-    Returns the RMSD and the graph jaccard distance between other structure and the
-    aforementioned structures.
-
-    This can be useful in case there is a direct link between structure and property
-    and we want to make sure that a structure is not to dissimilar from the set of structures
-    in structure_list.
-
-    :param structure_list:
-    :param property_list:
-    :param other_structure:
-    :return:
-    """
-
-    median_index = closest_index(property_list, np.median(property_list))
-    mean_index = closest_index(property_list, np.mean(property_list))
-    random_index = np.random.randint(0, len(structure_list))
-    q25_index = closest_index(property_list, np.quantile(property_list, 0.25))
-    q75_index = closest_index(property_list, np.quantile(property_list, 0.75))
-
-    lowest_structure = Structure.from_file(
-        structure_list[np.argmin(property_list)])
-    highest_structure = Structure.from_file(
-        structure_list[np.argmax(property_list)])
-    median_structure = Structure.from_file(structure_list[median_index])
-    mean_structure = Structure.from_file(structure_list[mean_index])
-    random_structure = Structure.from_file(structure_list[random_index])
-    q25_structure = Structure.from_file(structure_list[q25_index])
-    q75_structure = Structure.from_file(structure_list[q75_index])
-    other_structure = Structure.from_file(other_structure)
-
-    nn_strategy = JmolNN()
-
-    lowest_structure_graph = StructureGraph.with_local_env_strategy(
-        lowest_structure, nn_strategy)
-    highest_structure_graph = StructureGraph.with_local_env_strategy(
-        highest_structure, nn_strategy)
-    median_structure_graph = StructureGraph.with_local_env_strategy(
-        median_structure, nn_strategy)
-    mean_structure_graph = StructureGraph.with_local_env_strategy(
-        mean_structure, nn_strategy)
-    random_structure_graph = StructureGraph.with_local_env_strategy(
-        random_structure, nn_strategy)
-    q25_structure_graph = StructureGraph.with_local_env_strategy(
-        q25_structure, nn_strategy)
-    q75_structure_graph = StructureGraph.with_local_env_strategy(
-        q75_structure, nn_strategy)
-    other_structure_graph = StructureGraph.with_local_env_strategy(
-        other_structure, nn_strategy)
-
-    distances = {
-        'mean_rmsd':
-        get_rmsd(other_structure, mean_structure),
-        'highest_rmsd':
-        get_rmsd(other_structure, highest_structure),
-        'lowest_rmsd':
-        get_rmsd(other_structure, lowest_structure),
-        'median_rmsd':
-        get_rmsd(other_structure, median_structure),
-        'random_rmsd':
-        get_rmsd(other_structure, random_structure),
-        'q25_rmsd':
-        get_rmsd(other_structure, q25_structure),
-        'q75_rmsd':
-        get_rmsd(other_structure, q75_structure),
-        'mean_jaccard':
-        other_structure_graph.diff(mean_structure_graph, strict=False)['diff'],
-        'highest_jaccard':
-        other_structure_graph.diff(highest_structure_graph,
-                                   strict=False)['diff'],
-        'lowest_jaccard':
-        other_structure_graph.diff(lowest_structure_graph,
-                                   strict=False)['diff'],
-        'median_jaccard':
-        other_structure_graph.diff(median_structure_graph,
-                                   strict=False)['diff'],
-        'random_jaccard':
-        other_structure_graph.diff(random_structure_graph,
-                                   strict=False)['diff'],
-        'q25_jaccard':
-        other_structure_graph.diff(q25_structure_graph, strict=False)['diff'],
-        'q75_jaccard':
-        other_structure_graph.diff(q75_structure_graph, strict=False)['diff'],
-    }
-
-    return pd.DataFrame(distances)
-
-
-def kde_probability_observation(observations, other_observation) -> float:
-    """
-    Performs a KDE on the list of observation and the returns the
-    log likelihood of the data under the kde model
-    :param observations:
-    :param other_observation:
-    :return:
-    """
-    observations_array = np.array(observations)
-    other_observation_array = np.array(other_observation)
-    assert len(other_observation.shape) == len(observations_array.shape)
-
-    if len(observations_array.shape) == 1:
-        observations_array = observations_array.reshape(-1, 1)
-        other_observation_array = other_observation_array.reshape(-1, 1)
-
-    kd = KernelDensity(
-        kernel='gaussian', bandwidth=0.75).fit(observations_array)
-    return kd.score(other_observation_array)
-
-
-def kl_divergence(array_1, array_2):
-    """
-    KL divergence could be used a measure of covariate shift.
-    :param array_1:
-    :param array_2:
-    :return:
-    """
-
-    a = np.asarray(array_1, dtype=np.float)
-    a /= a.sum()
-    b = np.asarray(array_2, dtype=np.float)
-    b /= b.sum()
-
-    if len(a) > len(b):
-        np.random.shuffle(a)
-        a = a[:len(b)]
-    elif len(b) > len(a):
-        np.random.shuffle(b)
-        b = b[:len(a)]
-
-    return np.sum(np.where(a != 0, a * np.log(a / b), 0))
-
-
-def tanimoto_distance(array_1, array_2):
-    """
-    Continous form of the Tanimoto distance measure.
-    :param array_1:
-    :param array_2:
-    :return:
-    """
-    xy = np.dot(array_1, array_2)
-    return xy / (np.abs(array_1) + np.abs(array_2) - xy)
 
 
 def fingerprint_based_distances(fingerprint_list, other_fingerprint,

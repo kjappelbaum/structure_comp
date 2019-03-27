@@ -20,7 +20,7 @@ mulitprocessing.
 .. toctree::
    :maxdepth: 2
 
-   install
+install
    background
    references
 
