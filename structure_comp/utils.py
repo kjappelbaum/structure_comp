@@ -13,7 +13,7 @@ import os
 import functools
 from .rmsd import parse_periodic_case, rmsd
 from pymatgen import Structure
-import numpy as np 
+import numpy as np
 
 def get_structure_list(directory: str, extension: str = 'cif') -> list:
     """
