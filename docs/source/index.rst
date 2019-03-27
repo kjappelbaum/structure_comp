@@ -22,6 +22,7 @@ mulitprocessing.
 
    install
    background
+   quickstart
    references
 
 
