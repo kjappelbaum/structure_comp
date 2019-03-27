@@ -2,4 +2,4 @@
 Bibliography
 ===============
 
-.. bibliography:: _static/references.bib
+.. bibliography:: _static/bibliography.bib
