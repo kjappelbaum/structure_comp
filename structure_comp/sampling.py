@@ -10,6 +10,7 @@ __status__ = 'First Draft, Testing'
 
 from sklearn.cluster import KMeans
 from sklearn import metrics
+from sklearn.preprocessing import StandardScaler
 import pandas as pd
 import numpy as np
 from scipy.spatial import distance
@@ -48,7 +49,7 @@ class Sampler():
             list with the sampled names 
         """
         self.selection = []
-        data = self.dataframe[self.columns]
+        data = StandardScaler().fit_transform(self.dataframe[self.columns])
         kmeans = KMeans(n_clusters=self.k).fit(data)
         cluster_centers = kmeans.cluster_centers_
         closest, _ = metrics.pairwise_distances_argmin_min(
@@ -73,7 +74,7 @@ class Sampler():
         """
 
         self.selection = []
-        data = self.dataframe[self.columns].values
+        data = StandardScaler().fit_transform(self.dataframe[self.columns].values)
 
         index = np.random.randint(0, len(data) - 1)
 

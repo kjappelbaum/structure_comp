@@ -18,9 +18,27 @@ models are often good at interpolation but bad at extrapolation :cite:`meredig_c
 For expensive simulations -- or more efficient ML training -- one also wants to have tools
 for clever sampling. This is what the :code:`sampling` module tries to do.
 
+Duplicate removal
+-----------------
+
+Kabsch algorithm
+.................
+
+Graph based
+...........
+
+Hashing
+.......
+
+
+Statistics
+----------
+
 
 Sampling
 ---------
+For all sampling, we standardize the features to avoid overly large effects by e.g. units.
+
 
 Farthest point sampling
 ........................
@@ -38,4 +56,5 @@ KNN based
 .........
 
 The :math:`k`-nearest neighbor based sample selection clusters the :math:`S` into :math:`k` cluster
-and then selects the examples closest to the centroids.
+and then selects the examples closest to the centroids. This is based on the rational that :math:`k`nn-clustering
+tries to minimize the in-cluster variance :cite:`tibshirani_elements_2017?` (hence we sample from different clusters as we want a diverse set).
