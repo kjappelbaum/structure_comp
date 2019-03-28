@@ -13,6 +13,10 @@ from sklearn import metrics
 import pandas as pd
 import numpy as np
 from scipy.spatial import distance
+from ase.visualize.plot import plot_atoms
+import os
+from ase.io import read, write
+import matplotlib.pyplot as plt
 
 
 class Sampler():
@@ -43,6 +47,7 @@ class Sampler():
         Returns:
             list with the sampled names 
         """
+        self.selection = []
         data = self.dataframe[self.columns]
         kmeans = KMeans(n_clusters=self.k).fit(data)
         cluster_centers = kmeans.cluster_centers_
@@ -50,7 +55,7 @@ class Sampler():
             cluster_centers, data)
 
         selection = list(self.dataframe[self.name].iloc[closest].values)
-        self.selection.append(selection)
+        self.selection = selection
 
         return selection
 
@@ -67,6 +72,7 @@ class Sampler():
 
         """
 
+        self.selection = []
         data = self.dataframe[self.columns].values
 
         index = np.random.randint(0, len(data) - 1)
@@ -78,14 +84,26 @@ class Sampler():
 
         for _ in range(self.k - 1):
             dist = distance.cdist(remaining, greedy_data, metric)
-            greedy_index = np.argmax(np.argmax(np.max(dist, axis=0)))
+            greedy_index = np.argmax(np.argmax(np.min(dist, axis=0)))
             greedy_data.append(remaining[greedy_index])
             remaining = np.delete(remaining, greedy_index, 0)
 
         greedy_indices = []
 
         for d in greedy_data:
-            greedy_indices.append(np.array(np.where(np.all(data == d, axis=1)))[0])
+            greedy_indices.append(
+                np.array(np.where(np.all(data == d, axis=1)))[0])
 
         greedy_indices = np.concatenate(greedy_indices).ravel()
-        return list(self.dataframe[self.name][greedy_indices].values)
+
+        selection = list(self.dataframe[self.name][greedy_indices].values)
+        self.selection = selection
+        return selection
+
+    def inspect_sample(self, path: str, mode: str = 'ase'):
+        if mode == 'ase':
+            if self.selection:
+                for item in self.selection:
+                    fig, axarr = plt.subplots(1, 1, figsize=(15, 15))
+                    plt.title(item)
+                    plot_atoms(read(os.path.join(path, item)), axarr)
