@@ -16,17 +16,21 @@ from scipy.spatial import distance
 
 
 class Sampler():
-    def __init__(self, dataframe, columns, name='name', k=10):
+    def __init__(self,
+                 dataframe: pd.DataFrame,
+                 columns: list,
+                 name: str = 'name',
+                 k: int = 10):
         self.dataframe = dataframe
         self.columns = columns
         self.name = name
         self.k = k
-        assert self.k > len(
+        assert self.k < len(
             dataframe
         ), 'Sampling only possible if number of datapoints is greater than the number of requested samples'
         self.selection = []
 
-    def get_farthest_point_samples(self):
+    def get_farthest_point_samples(self) -> list:
         """
         Gets the k farthest point samples on dataframe, returns the identifiers
 
@@ -37,6 +41,7 @@ class Sampler():
             k (int): number of samples
 
         Returns:
+            list with the sampled names 
         """
         data = self.dataframe[self.columns]
         kmeans = KMeans(n_clusters=self.k).fit(data)
@@ -49,14 +54,20 @@ class Sampler():
 
         return selection
 
-    def greedy_farthest_point_samples(self, metric='euclidean'):
+    def greedy_farthest_point_samples(self, metric: str = 'euclidean') -> list:
         """
+
+        Args:
+            metric (string): metric to use for the distance, can be one from
+            https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.cdist.html
+            defaults to euclidean
 
         Returns:
+            list with the sampled names
 
         """
 
-        data = self.dataframe[self.columns]
+        data = self.dataframe[self.columns].values
 
         index = np.random.randint(0, len(data) - 1)
 
@@ -67,13 +78,14 @@ class Sampler():
 
         for _ in range(self.k - 1):
             dist = distance.cdist(remaining, greedy_data, metric)
-            greedy_index = np.argmax(dist)
+            greedy_index = np.argmax(np.argmax(np.max(dist, axis=0)))
             greedy_data.append(remaining[greedy_index])
             remaining = np.delete(remaining, greedy_index, 0)
 
         greedy_indices = []
 
         for d in greedy_data:
-            greedy_indices.append(np.where(data == d))
+            greedy_indices.append(np.array(np.where(np.all(data == d, axis=1)))[0])
 
-        return self.dataframe[self.name].iloc[greedy_indices]
+        greedy_indices = np.concatenate(greedy_indices).ravel()
+        return list(self.dataframe[self.name][greedy_indices].values)
