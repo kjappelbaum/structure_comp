@@ -21,6 +21,9 @@ class Sampler():
         self.columns = columns
         self.name = name
         self.k = k
+        assert self.k > len(
+            dataframe
+        ), 'Sampling only possible if number of datapoints is greater than the number of requested samples'
         self.selection = []
 
     def get_farthest_point_samples(self):

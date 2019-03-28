@@ -10,7 +10,7 @@ from pymatgen import Structure
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
 from .rmsd import parse_periodic_case, rmsd
-from .utils import get_structure_list, get_rmsd
+from .utils import get_structure_list, get_rmsd, closest_index
 import random
 from scipy.spatial import distance
 from scipy import stats

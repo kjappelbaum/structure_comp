@@ -4,7 +4,7 @@
 [![Build Status](https://travis-ci.com/kjappelbaum/structure_comp.svg?branch=master)](https://travis-ci.com/kjappelbaum/structure_comp)
 
 Small python package to efficiently remove duplicates from larger 
-structure databases. The main goal is to have something that is not $\mathcal{O}(N^2)$ 
+structure databases (and more). The main goal is to have something that is not $\mathcal{O}(N^2)$ 
 and works without a lot of threshold optimization. 
 
 The idea is to first map into a cheap scalar feature space, find composition duplicates
@@ -13,6 +13,7 @@ in this space and then compare the structure graphs of composition duplicates.
 Alternatively, one can also use the [Kabsch algorithm](https://en.wikipedia.org/wiki/Kabsch_algorithm) for comparison of the composition duplicates.
 
 Moreover, a second module tries to implement comparatively cheap metrics for the assessment of database diversity. 
+A third module allows to select samples for computational studies. 
 
 ## Acknowledgment
 We build on prior work:
@@ -27,6 +28,7 @@ We make use of the following open-source libraries:
 * pymatgen 
 * ase 
 * scipy 
+* sklearn 
 
 ## ToDo's
 * Clean-up main class
