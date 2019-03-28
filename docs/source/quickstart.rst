@@ -12,3 +12,4 @@ Getting Statistics
 
 Sampling
 --------
+The sampler object works on dataframes.

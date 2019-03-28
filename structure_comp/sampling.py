@@ -21,6 +21,7 @@ class Sampler():
         self.columns = columns
         self.name = name
         self.k = k
+        self.selection = []
 
     def get_farthest_point_samples(self):
         """
@@ -39,7 +40,11 @@ class Sampler():
         cluster_centers = kmeans.cluster_centers_
         closest, _ = metrics.pairwise_distances_argmin_min(
             cluster_centers, data)
-        return self.dataframe[self.name].iloc[closest]
+
+        selection = list(self.dataframe[self.name].iloc[closest].values)
+        self.selection.append(selection)
+
+        return selection
 
     def greedy_farthest_point_samples(self, metric='euclidean'):
         """

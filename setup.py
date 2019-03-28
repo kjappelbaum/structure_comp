@@ -12,7 +12,8 @@ setup(
         'ase',
         'tqdm',
         'pandas',
-        'scipy'
+        'scipy',
+        'sklearn'
     ],
     extras_require={
         'testing': ['pytest'],

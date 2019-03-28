@@ -11,3 +11,5 @@ We wanted to quantify 'diversity' and 'distance' of and between databases.
 Especially the :code:`DistExampleComparison` class was written due to the fact that ML
 models are often good at interpolation but bad at extrapolation :cite:`meredig_can_2018` -- hence we needed tools to detect this.
 
+For expensive simulations -- or more efficient ML training -- one also wants to have tools
+for clever sampling. This is what the :code:`sampling` module tries to do.
