@@ -35,21 +35,24 @@ class Sampler():
         ), 'Sampling only possible if number of datapoints is greater than the number of requested samples'
         self.selection = []
 
-    def get_farthest_point_samples(self) -> list:
+    def get_farthest_point_samples(self, standardize: bool = True) -> list:
         """
         Gets the k farthest point samples on dataframe, returns the identifiers
 
         Args:
-            dataframe (panadas DataFrame object): contains the features in the sampling space and the names
-            columns (list): list of string with column names of property columns
-            name (string): name of the column containing the identifiers
-            k (int): number of samples
+            standardize (bool): Flag that indicates whether features are standardized prior to clustering (defaults to True)
 
         Returns:
             list with the sampled names 
         """
         self.selection = []
-        data = StandardScaler().fit_transform(self.dataframe[self.columns])
+
+        if standardize:
+            data = StandardScaler().fit_transform(
+                self.dataframe[self.columns].values)
+        else:
+            data = self.dataframe[self.columns].values
+
         kmeans = KMeans(n_clusters=self.k).fit(data)
         cluster_centers = kmeans.cluster_centers_
         closest, _ = metrics.pairwise_distances_argmin_min(
@@ -60,13 +63,16 @@ class Sampler():
 
         return selection
 
-    def greedy_farthest_point_samples(self, metric: str = 'euclidean') -> list:
+    def greedy_farthest_point_samples(self,
+                                      metric: str = 'euclidean',
+                                      standardize: bool = True) -> list:
         """
 
         Args:
             metric (string): metric to use for the distance, can be one from
             https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.cdist.html
             defaults to euclidean
+            standardize (bool): flag that indicates whether features are standardized prior to sampling
 
         Returns:
             list with the sampled names
@@ -74,7 +80,12 @@ class Sampler():
         """
 
         self.selection = []
-        data = StandardScaler().fit_transform(self.dataframe[self.columns].values)
+
+        if standardize:
+            data = StandardScaler().fit_transform(
+                self.dataframe[self.columns].values)
+        else:
+            data = self.dataframe[self.columns].values
 
         index = np.random.randint(0, len(data) - 1)
 
