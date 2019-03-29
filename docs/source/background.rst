@@ -37,7 +37,7 @@ Statistics
 
 Sampling
 ---------
-For all sampling, we standardize the features by default to avoid overly large effects by e.g. different units :cite:`tibshirani_elements_2017?`.
+For all sampling, we standardize the features by default to avoid overly large effects by e.g. different units :cite:`tibshirani_elements_2017`.
 In case you want to use different weights one different features you can multiply manually the columns of the dataframe
 with weight factors and then turn the standardization off. 
 
@@ -52,7 +52,7 @@ by selecting points according to
   x_{k+1} = \text{argmax}_{x \in S} \min_{0\le i \le k} d(x_i, x)
 
 where :math:`d(x_i, x)` is an appropriate distance metric, which in our case is by default Euclidean.
-We initialize $x_0$ by choosing a random point from :math:`S`.
+We initialize :math:`x_0` by choosing a random point from :math:`S`.
 
 KNN based
 .........

@@ -8,16 +8,17 @@ __version__ = '0.1.0'
 __date__ = '27.03.19'
 __status__ = 'First Draft, Testing'
 
-from sklearn.cluster import KMeans
-from sklearn import metrics
-from sklearn.preprocessing import StandardScaler
-import pandas as pd
-import numpy as np
-from scipy.spatial import distance
-from ase.visualize.plot import plot_atoms
 import os
-from ase.io import read, write
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from ase.io import read
+from ase.visualize.plot import plot_atoms
+from scipy.spatial import distance
+from sklearn import metrics
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
 
 
 class Sampler():
@@ -70,8 +71,8 @@ class Sampler():
 
         Args:
             metric (string): metric to use for the distance, can be one from
-            https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.cdist.html
-            defaults to euclidean
+                https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.cdist.html
+                defaults to euclidean
             standardize (bool): flag that indicates whether features are standardized prior to sampling
 
         Returns:
@@ -112,10 +113,24 @@ class Sampler():
         self.selection = selection
         return selection
 
-    def inspect_sample(self, path: str, mode: str = 'ase'):
+    def inspect_sample(self, path: str = '', extension: str = '', mode: str = 'ase'):
+        """
+        Helps to quickly inspect the samples by plotting them (work great in e.g. jupyter notebooks,
+        here you'll have to call %matplotlib inline).
+
+        It assumes that the identifier the sampler returned are file-names, -stems or -paths.
+
+        Args:
+            path (str): path to the structure directory
+            extension (str): extension (with the leading dot, e.g. '.cif')
+            mode (str): visualization mode for the structures
+
+        Returns:
+
+        """
         if mode == 'ase':
             if self.selection:
                 for item in self.selection:
                     fig, axarr = plt.subplots(1, 1, figsize=(15, 15))
                     plt.title(item)
-                    plot_atoms(read(os.path.join(path, item)), axarr)
+                    plot_atoms(read(os.path.join(path, ''.join([item, extension]))), axarr)
