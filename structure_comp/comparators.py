@@ -26,17 +26,26 @@ logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
 
 
-
 class DistStatistic():
     def __init__(self, structure_list):
         self.structure_list = structure_list
 
     @classmethod
-    def from_folder(class_object, folder, extension='.cif'):
+    def from_folder(class_object, folder: str, extension: str = '.cif'):
         sl = get_structure_list(folder, extension)
         return class_object(sl)
 
-    def randomized_graphs(self, iterations=5000) -> list:
+    def randomized_graphs(self, iterations: int = 5000) -> list:
+        """
+        Randomly sample structures from the structure list and compare their Jaccard graph distance.
+        
+        Args:
+            iterations (int): Number of comparisons (sampling works with replacement, i.e. the same pair might
+            be sampled several times).
+
+        Returns:
+            list of length iterations of the Jaccard distances 
+        """
         diffs = []
         for _ in tqdm(range(iterations)):
             random_selection = random.sample(self.structure_list, 2)
@@ -50,7 +59,9 @@ class DistStatistic():
             diffs.append(sgraph_a.diff(sgraph_b, strict=False)['dist'])
         return diffs
 
-    def randomized_structure_property(self, property='density', iterations=5000) -> list:
+    def randomized_structure_property(self,
+                                      property: str = 'density',
+                                      iterations: int = 5000) -> list:
         diffs = []
         for _ in tqdm(range(iterations)):
             random_selection = random.sample(self.structure_list, 2)
@@ -73,7 +84,6 @@ class DistStatistic():
             rmsds.append(a)
 
         return rmsds
-
 
 
 class DistComparison():
@@ -119,16 +129,20 @@ class DistExampleComparison():
         median_index = closest_index(property_list, np.median(property_list))
         mean_index = closest_index(property_list, np.mean(property_list))
         random_index = np.random.randint(0, len(self.structure_list))
-        q25_index = closest_index(property_list, np.quantile(property_list, 0.25))
-        q75_index = closest_index(property_list, np.quantile(property_list, 0.75))
+        q25_index = closest_index(property_list,
+                                  np.quantile(property_list, 0.25))
+        q75_index = closest_index(property_list,
+                                  np.quantile(property_list, 0.75))
 
         lowest_structure = Structure.from_file(
             self.structure_list[np.argmin(property_list)])
         highest_structure = Structure.from_file(
             self.structure_list[np.argmax(property_list)])
-        median_structure = Structure.from_file(self.structure_list[median_index])
+        median_structure = Structure.from_file(
+            self.structure_list[median_index])
         mean_structure = Structure.from_file(self.structure_list[mean_index])
-        random_structure = Structure.from_file(self.structure_list[random_index])
+        random_structure = Structure.from_file(
+            self.structure_list[random_index])
         q25_structure = Structure.from_file(self.structure_list[q25_index])
         q75_structure = Structure.from_file(self.structure_list[q75_index])
         other_structure = Structure.from_file(self.file)
@@ -154,43 +168,43 @@ class DistExampleComparison():
 
         distances = {
             'mean_rmsd':
-                get_rmsd(other_structure, mean_structure),
+            get_rmsd(other_structure, mean_structure),
             'highest_rmsd':
-                get_rmsd(other_structure, highest_structure),
+            get_rmsd(other_structure, highest_structure),
             'lowest_rmsd':
-                get_rmsd(other_structure, lowest_structure),
+            get_rmsd(other_structure, lowest_structure),
             'median_rmsd':
-                get_rmsd(other_structure, median_structure),
+            get_rmsd(other_structure, median_structure),
             'random_rmsd':
-                get_rmsd(other_structure, random_structure),
+            get_rmsd(other_structure, random_structure),
             'q25_rmsd':
-                get_rmsd(other_structure, q25_structure),
+            get_rmsd(other_structure, q25_structure),
             'q75_rmsd':
-                get_rmsd(other_structure, q75_structure),
+            get_rmsd(other_structure, q75_structure),
             'mean_jaccard':
-                other_structure_graph.diff(mean_structure_graph, strict=False)['diff'],
+            other_structure_graph.diff(mean_structure_graph,
+                                       strict=False)['diff'],
             'highest_jaccard':
-                other_structure_graph.diff(highest_structure_graph,
-                                           strict=False)['diff'],
+            other_structure_graph.diff(highest_structure_graph,
+                                       strict=False)['diff'],
             'lowest_jaccard':
-                other_structure_graph.diff(lowest_structure_graph,
-                                           strict=False)['diff'],
+            other_structure_graph.diff(lowest_structure_graph,
+                                       strict=False)['diff'],
             'median_jaccard':
-                other_structure_graph.diff(median_structure_graph,
-                                           strict=False)['diff'],
+            other_structure_graph.diff(median_structure_graph,
+                                       strict=False)['diff'],
             'random_jaccard':
-                other_structure_graph.diff(random_structure_graph,
-                                           strict=False)['diff'],
+            other_structure_graph.diff(random_structure_graph,
+                                       strict=False)['diff'],
             'q25_jaccard':
-                other_structure_graph.diff(q25_structure_graph, strict=False)['diff'],
+            other_structure_graph.diff(q25_structure_graph,
+                                       strict=False)['diff'],
             'q75_jaccard':
-                other_structure_graph.diff(q75_structure_graph, strict=False)['diff'],
+            other_structure_graph.diff(q75_structure_graph,
+                                       strict=False)['diff'],
         }
 
         return pd.DataFrame(distances)
-
-
-
 
 
 def fingerprint_based_distances(fingerprint_list, other_fingerprint,
