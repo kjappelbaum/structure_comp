@@ -45,12 +45,12 @@ Farthest point sampling
 The greedy farthest point sampling (FPS) :cite:`peyre_geodesic_2010` tries to find a good sampling of the point set :math:`S`
 by selecting points according to
 
-..math::
+.. math::
 
-    x_{k+1} = \argmax_{x \in S} \min_{0\le i \le k} d(x_i, x)
+  x_{k+1} = \argmax_{x \in S} \min_{0\le i \le k} d(x_i, x)
 
-where $d(x_i, x)$ is an appropriate distance metric, which in our case is by default Euclidean.
-We initialize $x_0$ by choosing a random point from $S$.
+where :math:`d(x_i, x)` is an appropriate distance metric, which in our case is by default Euclidean.
+We initialize $x_0$ by choosing a random point from :math:`S`.
 
 KNN based
 .........
