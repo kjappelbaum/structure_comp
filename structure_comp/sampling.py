@@ -27,6 +27,14 @@ class Sampler():
                  columns: list,
                  name: str = 'name',
                  k: int = 10):
+        """
+        Class for selecting samples from a collection of samples.
+        Args:
+            dataframe (pandas dataframe): dataframe with properties and names/identifiers
+            columns (list): list of column names of the feature columns
+            name (str): name of the identifier column
+            k (int): number of the samples to select
+        """
         self.dataframe = dataframe
         self.columns = columns
         self.name = name

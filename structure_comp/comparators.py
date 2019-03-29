@@ -32,6 +32,15 @@ class DistStatistic():
 
     @classmethod
     def from_folder(class_object, folder: str, extension: str = '.cif'):
+        """
+
+        Args:
+            folder (str): name of the folder which is used to create the structure list
+            extension (str): extension of the structure files
+
+        Returns:
+
+        """
         sl = get_structure_list(folder, extension)
         return class_object(sl)
 
@@ -62,6 +71,17 @@ class DistStatistic():
     def randomized_structure_property(self,
                                       property: str = 'density',
                                       iterations: int = 5000) -> list:
+        """
+
+        Args:
+            property (str): property that is used for the structure comparisons, available options are
+                density, num_sites, volume. Default is density.
+            iterations (int): number of comparisons (sampling works with replacement, i.e. the same pair might
+            be sampled several times).
+
+        Returns:
+
+        """
         diffs = []
         for _ in tqdm(range(iterations)):
             random_selection = random.sample(self.structure_list, 2)
@@ -87,7 +107,13 @@ class DistStatistic():
 
 
 class DistComparison():
-    def __init__(self, structure_list_1, structure_list_2):
+    def __init__(self, structure_list_1: list, structure_list_2: list):
+        """
+
+        Args:
+            structure_list_1 (list):
+            structure_list_2:
+        """
         self.structure_list_1 = structure_list_1
         self.structure_list_2 = structure_list_2
 
