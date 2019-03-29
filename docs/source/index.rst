@@ -11,10 +11,7 @@ easy-to-use tools to:
 
 * remove structural duplicates from structural databases (useful for high-throughput studies)
 * compare structures and distributions across feature and structure space (useful for machine learning)
-
-The routines for removal of duplicates are implemented in a cached version and use, if possible,
-mulitprocessing.
-
+* sample from structural database
 
 
 .. toctree::
@@ -23,6 +20,7 @@ mulitprocessing.
    install
    background
    quickstart
+   contribute
    references
 
 
