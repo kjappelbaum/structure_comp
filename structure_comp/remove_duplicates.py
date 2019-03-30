@@ -25,8 +25,7 @@ import matplotlib.pyplot as plt
 from tqdm.autonotebook import tqdm
 import pandas as pd
 from .rmsd import parse_periodic_case, rmsd
-from .utils import get_structure_list
-from .comparators import get_hash
+from .utils import get_structure_list, get_hash
 from collections import defaultdict
 
 logger = logging.getLogger('RemoveDuplicates')

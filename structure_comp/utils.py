@@ -14,6 +14,12 @@ import functools
 from .rmsd import parse_periodic_case, rmsd
 from pymatgen import Structure
 import numpy as np
+import concurrent.futures
+from pymatgen.analysis.graphs import StructureGraph
+from pymatgen.analysis.local_env import JmolNN
+import logging
+logger = logging.getLogger()
+
 
 def get_structure_list(directory: str, extension: str = 'cif') -> list:
     """
@@ -95,3 +101,22 @@ def tanimoto_distance(array_1, array_2):
     """
     xy = np.dot(array_1, array_2)
     return xy / (np.abs(array_1) + np.abs(array_2) - xy)
+
+
+def get_hash(structure: Structure):
+    """
+    This gets hash for the Niggli reduced cell
+
+    Args:
+        structure: pymatgen structure object
+
+    Returns:
+
+    """
+    crystal = structure.get_reduced_structure()
+    nn_strategy = JmolNN()
+    sgraph_a = StructureGraph.with_local_env_strategy(crystal, nn_strategy)
+    graph_hash = str(hash(sgraph_a.graph))
+    comp_hash = str(hash(str(crystal.composition)))
+    density_hash = str(hash(crystal.density))
+    return graph_hash + comp_hash + density_hash

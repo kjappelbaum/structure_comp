@@ -323,15 +323,3 @@ def mmd_null(x, y, kernel, kernel_parameters, n_samples):
     return s
 
 
-def get_hash(structure: Structure):
-    """
-    This gets hash for the Niggli reduced cell
-    :return:
-    """
-    crystal = structure.get_reduced_structure()
-    nn_strategy = JmolNN()
-    sgraph_a = StructureGraph.with_local_env_strategy(crystal, nn_strategy)
-    graph_hash = str(hash(sgraph_a.graph))
-    comp_hash = str(hash(str(crystal.composition)))
-    density_hash = str(hash(crystal.density))
-    return graph_hash + comp_hash + density_hash
