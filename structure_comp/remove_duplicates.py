@@ -353,7 +353,7 @@ class RemoveDuplicates():
                         executor.map(self.get_graph_hash_dict,
                                      self.structure_list)),
                     total=len(self.structure_list)):
-                logger.debug('getting hash for {}', structure)
+                logger.debug('getting hash for %s', structure)
 
         return self.hash_dict
 
@@ -371,19 +371,19 @@ class RemoveDuplicates():
             if not self.cached:
                 self.reduced_structure_list = get_structure_list(
                     self.reduced_structure_dir)
-                logger.debug('we have {} reduced structures'.format(
-                    len(self.reduced_structure_list)))
+                logger.debug('we have %s reduced structures',
+                             len(self.reduced_structure_list))
 
                 self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df(
                     self.reduced_structure_list)
             else:
-                logger.debug('we have {} reduced structures'.format(
-                    len(self.reduced_structure_dict)))
+                logger.debug('we have %s reduced structures',
+                             len(self.reduced_structure_dict))
                 self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df_cached(
                     self.reduced_structure_dict)
 
-            logger.debug('columns of dataframe are {}'.format(
-                self.scalar_feature_matrix.columns))
+            logger.debug('columns of dataframe are %s',
+                         self.scalar_feature_matrix.columns)
 
             self.similar_composition_tuples = RemoveDuplicates.get_scalar_distance_matrix(
                 self.scalar_feature_matrix)

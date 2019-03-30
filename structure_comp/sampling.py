@@ -52,7 +52,7 @@ class Sampler():
             standardize (bool): Flag that indicates whether features are standardized prior to clustering (defaults to True)
 
         Returns:
-            list with the sampled names 
+            list with the sampled names
         """
         self.selection = []
 
@@ -121,7 +121,10 @@ class Sampler():
         self.selection = selection
         return selection
 
-    def inspect_sample(self, path: str = '', extension: str = '', mode: str = 'ase'):
+    def inspect_sample(self,
+                       path: str = '',
+                       extension: str = '',
+                       mode: str = 'ase'):
         """
         Helps to quickly inspect the samples by plotting them (work great in e.g. jupyter notebooks,
         here you'll have to call %matplotlib inline).
@@ -141,4 +144,6 @@ class Sampler():
                 for item in self.selection:
                     fig, axarr = plt.subplots(1, 1, figsize=(15, 15))
                     plt.title(item)
-                    plot_atoms(read(os.path.join(path, '.'.join([item, extension]))), axarr)
+                    plot_atoms(
+                        read(os.path.join(path, '.'.join([item, extension]))),
+                        axarr)

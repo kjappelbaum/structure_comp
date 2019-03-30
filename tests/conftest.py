@@ -8,10 +8,7 @@ __version__ = '0.1.0'
 __date__ = '28.03.19'
 __status__ = 'First Draft, Testing'
 
-import pytest
-from pymatgen import Structure
 import os
-from glob import glob
 
 THIS_DIR = os.path.dirname(__file__)
 

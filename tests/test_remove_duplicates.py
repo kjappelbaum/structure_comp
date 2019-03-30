@@ -8,7 +8,6 @@ __version__ = '0.1.0'
 __date__ = '28.03.19'
 __status__ = 'First Draft, Testing'
 
-import pytest
 import os
 from structure_comp.utils import get_structure_list
 from structure_comp.remove_duplicates import RemoveDuplicates
@@ -51,8 +50,9 @@ def test_structure_folder_2():
 
 def test_structure_folder_3():
     structure_list = get_structure_list(os.path.join(
-        THIS_DIR,
-        'structures')) + [os.path.join(THIS_DIR, 'structure_duplicates', 'UiO-66.cif')]
+        THIS_DIR, 'structures')) + [
+            os.path.join(THIS_DIR, 'structure_duplicates', 'UiO-66.cif')
+        ]
     rd_object_1 = RemoveDuplicates(
         structure_list, cached=True, method='standard')
     rd_object_2 = RemoveDuplicates(

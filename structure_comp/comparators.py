@@ -9,18 +9,12 @@ import logging
 from pymatgen import Structure
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
-from .rmsd import parse_periodic_case, rmsd
 from .utils import get_structure_list, get_rmsd, closest_index, tanimoto_distance
 import random
 from scipy.spatial import distance
-from scipy import stats
-from sklearn import metrics
 import numpy as np
-import functools
 import pandas as pd
 from sklearn.cluster import KMeans
-from sklearn.neighbors import KernelDensity
-from scipy.spatial import KDTree
 
 logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
@@ -134,10 +128,12 @@ class DistExampleComparison():
         sl = get_structure_list(folder, extension)
         return class_object(sl, file)
 
-    def property_based_distances_histogram(self, property_list: list) -> pd.DataFrame:
+    @staticmethod
+    def property_based_distances_histogram(property_list: list) -> pd.DataFrame:
         ...
 
-    def property_based_distances_clustered(self, property_list: list) -> pd.DataFrame:
+    def property_based_distances_clustered(
+            self, property_list: list) -> pd.DataFrame:
         """
         Compares other structure to
             - lowest, highest, median, mean and random structure from structure list
@@ -324,5 +320,3 @@ def mmd_null(x, y, kernel, kernel_parameters, n_samples):
         s[i] = mmd(z[0:len(x)], z[len(x):], kernel, kernel_parameters)
     s = np.array(s)
     return s
-
-

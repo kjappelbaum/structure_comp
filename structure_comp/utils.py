@@ -38,7 +38,7 @@ def get_structure_list(directory: str, extension: str = 'cif') -> list:
 
 @functools.lru_cache(maxsize=128, typed=False)
 def get_rmsd(structure_a: Structure, structure_b: Structure) -> float:
-    p_atoms, P, q_atoms, Q = parse_periodic_case(structure_a, structure_b)
+    _, P, _, Q = parse_periodic_case(structure_a, structure_b)
     result = rmsd(P, Q)
     return result
 
