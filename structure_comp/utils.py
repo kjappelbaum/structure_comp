@@ -14,6 +14,7 @@ import functools
 from .rmsd import parse_periodic_case, rmsd
 from pymatgen import Structure
 import numpy as np
+from scipy import stats
 import concurrent.futures
 from sklearn.neighbors import KernelDensity
 from pymatgen.analysis.graphs import StructureGraph
@@ -48,48 +49,14 @@ def closest_index(array, target):
     return np.argmin(np.abs(array - target))
 
 
-def kde_probability_observation(observations, other_observation) -> float:
-    """
-    Performs a KDE on the list of observation and the returns the
-    log likelihood of the data under the kde model
-    Args:
-        observations:
-        other_observation:
-
-    Returns:
-
-    """
-    observations_array = np.array(observations)
-    other_observation_array = np.array(other_observation)
-    assert len(other_observation.shape) == len(observations_array.shape)
-
-    if len(observations_array.shape) == 1:
-        observations_array = observations_array.reshape(-1, 1)
-        other_observation_array = other_observation_array.reshape(-1, 1)
-
-    kd = KernelDensity(
-        kernel='gaussian', bandwidth=0.75).fit(observations_array)
-    return kd.score(other_observation_array)
-
-
-def kl_divergence(array_1, array_2):
+def kl_divergence(array_1, array_2, len=20):
     """
     KL divergence could be used a measure of covariate shift.
     """
+    a = np.histogram(array_1, bins=len)
+    b = np.histogram(array_2, bins=len)
 
-    a = np.asarray(array_1, dtype=np.float)
-    a /= a.sum()
-    b = np.asarray(array_2, dtype=np.float)
-    b /= b.sum()
-
-    if len(a) > len(b):
-        np.random.shuffle(a)
-        a = a[:len(b)]
-    elif len(b) > len(a):
-        np.random.shuffle(b)
-        b = b[:len(a)]
-
-    return np.sum(np.where(a != 0, a * np.log(a / b), 0))
+    return stats.entropy(a, b)
 
 
 def tanimoto_distance(array_1, array_2):
@@ -103,7 +70,7 @@ def tanimoto_distance(array_1, array_2):
 
     """
     xy = np.dot(array_1, array_2)
-    return xy / (np.abs(array_1) + np.abs(array_2) - xy)
+    return xy / (np.linalg.norm(array_1) + np.linalg.norm(array_2) - xy)
 
 
 def get_hash(structure: Structure):

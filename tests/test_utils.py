@@ -73,23 +73,6 @@ def test_get_rmsd(get_all_structures):
     assert np.allclose(comp_matrix, comp_matrix.T, atol=1e-8)
 
 
-def test_kde_probability_observation(get_distributions):
-    """
-    Check that probabilty for observing the same distribution is one, regardless of test order and that for off-diagonal
-    it is smaller than one. For speed reasons, we test the sum and not the single elements.
-    """
-    comp_matrix = np.zeros((len(get_distributions), len(get_distributions)))
-    for i, dist_a in enumerate(get_distributions):
-        for j, dist_b in enumerate(get_distributions):
-            comp_matrix[i][j] = kde_probability_observation(dist_a, dist_b)
-
-    assert pytest.approx(sum(np.diag(comp_matrix)),
-                         0.1) == len(get_distributions)
-    assert np.sum(
-        (comp_matrix -
-         comp_matrix.T)) < len(get_distributions)**2 - len(get_distributions)
-
-
 def test_kl_divergence(get_distributions):
     """
     Check that probabilty for observing the same distribution is one, regardless of test order and that for off-diagonal
