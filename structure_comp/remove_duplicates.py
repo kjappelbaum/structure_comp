@@ -315,16 +315,19 @@ class RemoveDuplicates():
         pairs = []
         with concurrent.futures.ProcessPoolExecutor() as executor:
             if not self.cached:
-                for items, result in tqdm(zip(tupellist,
-                        executor.map(self.compare_graph_pair, tupellist)),
+                for _, result in tqdm(
+                        zip(tupellist,
+                            executor.map(self.compare_graph_pair, tupellist)),
                         total=len(tupellist)):
                     logger.debug(result)
                     if result:
                         pairs.append(result)
             else:
-                for items, result in tqdm(zip(tupellist,
-                        executor.map(self.compare_graph_pair_cached,
-                                     tupellist)),
+                for _, result in tqdm(
+                        zip(
+                            tupellist,
+                            executor.map(self.compare_graph_pair_cached,
+                                         tupellist)),
                         total=len(tupellist)):
                     logger.debug(result)
                     if result:
@@ -335,15 +338,24 @@ class RemoveDuplicates():
         logger.debug('cleaning directory up')
         shutil.rmtree(self.tempdirpath)
 
-    @staticmethod
-    def get_graph_hash_dict(structure_list: list):
-        hash_dict = defaultdict(list)
-        for structure in structure_list:
-            crystal = Structure.from_file(structure)
-            name = Path(structure).name
-            hash = get_hash(crystal)
-            hash_dict[hash].append(name)
-        return hash_dict
+    def get_graph_hash_dict(self, structure):
+        crystal = Structure.from_file(structure)
+        name = Path(structure).name
+        hash = get_hash(crystal)
+        self.hash_dict[hash].append(name)
+
+    def get_graph_hash_dicts(self):
+        self.hash_dict = defaultdict(list)
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            for structure in tqdm(
+                    zip(
+                        self.structure_list,
+                        executor.map(self.get_graph_hash_dict,
+                                     self.structure_list)),
+                    total=len(self.structure_list)):
+                logger.debug('getting hash for {}', structure)
+
+        return self.hash_dict
 
     def run_filtering(self):
         """

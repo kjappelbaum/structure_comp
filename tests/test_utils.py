@@ -13,7 +13,7 @@ import numpy as np
 import os
 from pymatgen import Structure
 from glob import glob
-from structure_comp.utils import get_hash, get_rmsd, kl_divergence, tanimoto_distance
+from structure_comp.utils import get_hash, get_rmsd, kl_divergence, tanimoto_distance, get_cheap_hash
 from scipy import stats
 
 THIS_DIR = os.path.dirname(__file__)
@@ -52,6 +52,23 @@ def test_get_hash(get_all_structures):
             if i < j:
                 hash_a = get_hash(structure_a)
                 hash_b = get_hash(structure_b)
+                if hash_a == hash_b:
+                    comp_matrix[i][j] = 1
+                else:
+                    comp_matrix[i][j] = 0
+    assert sum(comp_matrix) == sum(np.diag(comp_matrix))
+
+
+def test_get_cheap_hash(get_all_structures):
+    """
+    For all structures make sure that the hash is only identical to the structure itself.
+    """
+    comp_matrix = np.zeros((len(get_all_structures), len(get_all_structures)))
+    for i, structure_a in enumerate(get_all_structures):
+        for j, structure_b in enumerate(get_all_structures):
+            if i < j:
+                hash_a = get_cheap_hash(structure_a)
+                hash_b = get_cheap_hash(structure_b)
                 if hash_a == hash_b:
                     comp_matrix[i][j] = 1
                 else:

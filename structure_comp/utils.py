@@ -94,20 +94,42 @@ def tanimoto_distance(array_1, array_2):
     return xy / (np.sum(array_1**2) + np.sum(array_2**2) - xy)
 
 
-def get_hash(structure: Structure):
+def get_hash(structure: Structure, get_niggli=True):
     """
-    This gets hash for the Niggli reduced cell
+    This gets hash, using the structure graph as a part of the has
 
     Args:
         structure: pymatgen structure object
-
+        get_niggli (bool):
     Returns:
 
     """
-    crystal = structure.get_reduced_structure()
+    if get_niggli:
+        crystal = structure.get_reduced_structure()
+    else:
+        crystal = structure
     nn_strategy = JmolNN()
     sgraph_a = StructureGraph.with_local_env_strategy(crystal, nn_strategy)
     graph_hash = str(hash(sgraph_a.graph))
     comp_hash = str(hash(str(crystal.composition)))
     density_hash = str(hash(crystal.density))
     return graph_hash + comp_hash + density_hash
+
+
+def get_cheap_hash(structure: Structure, get_niggli=True):
+    """
+    This gets hash based on composition and density
+
+    Args:
+        structure: pymatgen structure object
+        get_niggli (bool):
+    Returns:
+
+    """
+    if get_niggli:
+        crystal = structure.get_reduced_structure()
+    else:
+        crystal = structure
+    comp_hash = str(hash(str(crystal.composition)))
+    density_hash = str(hash(crystal.density))
+    return comp_hash + density_hash

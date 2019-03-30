@@ -10,7 +10,7 @@ setup(
         'numpy>=1.14.3', 'pymatgen',  'ase', 'tqdm', 'pandas', 'scipy', 'scikit-learn'
     ],
     extras_require={
-        'testing': ['pytest', 'pytest-cov'],
+        'testing': ['pytest', 'pytest-cov<2.6'],
         'docs': ['sphinx-rtd-theme', 'sphinxcontrib-bibtex'],
         'pre-commit': [
             'pre-commit==1.11.0', 'yapf==0.24.0', 'prospector==1.1.5',
