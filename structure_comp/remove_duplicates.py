@@ -101,6 +101,17 @@ class RemoveDuplicates():
     def __iter__(self):
         return iter(self.pairs)
 
+    def get_reduced_structure(self, structure):
+        sname = Path(structure).name
+        stem = Path(structure).stem
+        crystal = Structure.from_file(structure)
+        crystal = crystal.get_reduced_structure()
+        if not self.cached:
+            crystal.to(filename=os.path.join(self.tempdirpath, sname))
+        else:
+            self.reduced_structure_dict[stem] = crystal
+        return stem
+
     def get_reduced_structures(self):
         """
         To make calculations cheaper, we first get Niggli cells.
@@ -111,15 +122,12 @@ class RemoveDuplicates():
             self.tempdirpath = tempfile.mkdtemp()
             self.reduced_structure_dir = self.tempdirpath
         logger.info('creating reduced structures')
-        for structure in tqdm(self.structure_list):
-            sname = Path(structure).name
-            stem = Path(structure).stem
-            crystal = Structure.from_file(structure)
-            crystal = crystal.get_reduced_structure()
-            if not self.cached:
-                crystal.to(filename=os.path.join(self.tempdirpath, sname))
-            else:
-                self.reduced_structure_dict[stem] = crystal
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            for _ in tqdm(
+                    executor.map(self.get_reduced_structure,
+                                 self.structure_list),
+                    total=len(self.structure_list)):
+                logger.debug('reduced structure for {} created'.format(_))
 
     @staticmethod
     def get_scalar_features(structure: Structure):
@@ -163,7 +171,7 @@ class RemoveDuplicates():
         feature_list = []
         logger.info('creating scalar features')
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        with concurrent.futures.ProcessPoolExecutor() as executor:
             for structure, result in tqdm(
                     zip(
                         reduced_structure_list,
@@ -177,8 +185,9 @@ class RemoveDuplicates():
                     'density': result[1]
                 }
                 feature_list.append(features)
-
-        return pd.DataFrame(feature_list)
+            df = pd.DataFrame(feature_list)
+            logger.debug('The df looks like'.format(df.head()))
+        return df
 
     @staticmethod
     def get_scalar_df_cached(reduced_structure_dict: dict):
@@ -202,8 +211,10 @@ class RemoveDuplicates():
                 'density': density
             }
             feature_list.append(features)
+        df = pd.DataFrame(feature_list)
+        logger.debug('The df looks like'.format(df.head()))
 
-        return pd.DataFrame(feature_list)
+        return df
 
     @staticmethod
     def get_scalar_distance_matrix(scalar_feature_df: pd.DataFrame,
@@ -302,11 +313,12 @@ class RemoveDuplicates():
         """
         logger.info('constructing and comparing structure graphs')
         pairs = []
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        with concurrent.futures.ProcessPoolExecutor() as executor:
             if not self.cached:
                 for items, result in tqdm(
                         executor.map(self.compare_graph_pair, tupellist),
                         total=len(tupellist)):
+                    logger.debug(result)
                     if result:
                         pairs.append(result)
             else:
@@ -314,6 +326,7 @@ class RemoveDuplicates():
                         executor.map(self.compare_graph_pair_cached,
                                      tupellist),
                         total=len(tupellist)):
+                    logger.debug(result)
                     if result:
                         pairs.append(result)
         return pairs
@@ -352,6 +365,8 @@ class RemoveDuplicates():
                 self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df(
                     self.reduced_structure_list)
             else:
+                logger.debug('we have {} reduced structures'.format(
+                    len(self.reduced_structure_dict)))
                 self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df_cached(
                     self.reduced_structure_dict)
 

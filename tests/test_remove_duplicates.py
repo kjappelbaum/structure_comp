@@ -49,6 +49,25 @@ def test_structure_folder_2():
                 rd_object_2.number_of_duplicates)
 
 
+def test_structure_folder_3():
+    structure_list = get_structure_list(os.path.join(
+        THIS_DIR,
+        'structures')) + [os.path.join(THIS_DIR, 'structure_duplicates', 'UiO-66.cif')]
+    rd_object_1 = RemoveDuplicates(
+        structure_list, cached=True, method='standard')
+    rd_object_2 = RemoveDuplicates(
+        structure_list, cached=False, method='standard')
+
+    rd_object_1.run_filtering()
+    assert rd_object_1.number_of_duplicates == 1
+    rd_object_2.run_filtering()
+    assert rd_object_2.number_of_duplicates == 1
+    assert not (rd_object_1.number_of_duplicates >
+                rd_object_2.number_of_duplicates)
+    assert not (rd_object_1.number_of_duplicates <
+                rd_object_2.number_of_duplicates)
+
+
 # Make sure that structures are removed if they are supercells
 def all_supercells_test():
     pass
