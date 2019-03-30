@@ -1,17 +1,17 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
-# Efficient duplicate removal in large databases (not O(N^2)
-# such as in https://pubs.acs.org/doi/pdf/10.1021/acs.chemmater.5b03836)
-# Making it simpler, maybe cheaper and more general
-# than https://pubs.acs.org/doi/pdf/10.1021/acs.cgd.7b01663
-# Should work without a threshold
+__author__ = 'Kevin M. Jablonka'
+__copyright__ = 'MIT License'
+__maintainer__ = 'Kevin M. Jablonka'
+__email__ = 'kevin.jablonka@epfl.ch'
+__version__ = '0.1.0'
+__date__ = '18.03.19'
+__status__ = 'First Draft, Testing'
 
 import os
 from pathlib import Path
 import numpy as np
 import shutil
-from glob import glob
 from pymatgen import Structure
 import concurrent.futures
 from pymatgen.analysis.graphs import StructureGraph
@@ -187,7 +187,6 @@ class RemoveDuplicates():
                 }
                 feature_list.append(features)
             df = pd.DataFrame(feature_list)
-            logger.debug('The df looks like'.format(df.head()))
         return df
 
     @staticmethod
@@ -282,7 +281,7 @@ class RemoveDuplicates():
                 return items
         except ValueError:
             logger.debug('Structures were probably not different')
-            return None
+            return False
 
     def compare_graph_pair_cached(self, items):
         nn_strategy = JmolNN()
@@ -300,7 +299,7 @@ class RemoveDuplicates():
                 return items
         except ValueError:
             logger.debug('Structures were probably not different')
-            return None
+            return False
 
     def compare_graphs(self, tupellist: list) -> list:
         """
@@ -316,16 +315,16 @@ class RemoveDuplicates():
         pairs = []
         with concurrent.futures.ProcessPoolExecutor() as executor:
             if not self.cached:
-                for items, result in tqdm(
-                        executor.map(self.compare_graph_pair, tupellist),
+                for items, result in tqdm(zip(tupellist,
+                        executor.map(self.compare_graph_pair, tupellist)),
                         total=len(tupellist)):
                     logger.debug(result)
                     if result:
                         pairs.append(result)
             else:
-                for items, result in tqdm(
+                for items, result in tqdm(zip(tupellist,
                         executor.map(self.compare_graph_pair_cached,
-                                     tupellist),
+                                     tupellist)),
                         total=len(tupellist)):
                     logger.debug(result)
                     if result:
@@ -377,11 +376,9 @@ class RemoveDuplicates():
             self.similar_composition_tuples = RemoveDuplicates.get_scalar_distance_matrix(
                 self.scalar_feature_matrix)
 
-            logger.debug('similiar composition tuples are'.format(self.similar_composition_tuples))
-
             self.pairs = self.compare_graphs(self.similar_composition_tuples)
 
-        elif self.method == 'graph_hash':
+        elif self.method == 'hash':
             RemoveDuplicates.get_graph_hash_dict(self.structure_list)
 
     @staticmethod

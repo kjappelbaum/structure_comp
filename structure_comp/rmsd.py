@@ -10,7 +10,7 @@ import copy
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from scipy.spatial.distance import cdist
-from ase.io import read, write
+from ase.io import read
 from ase.build import niggli_reduce
 
 AXIS_SWAPS = np.array([[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 1, 0],

@@ -15,8 +15,6 @@ from .rmsd import parse_periodic_case, rmsd
 from pymatgen import Structure
 import numpy as np
 from scipy import stats
-import concurrent.futures
-from sklearn.neighbors import KernelDensity
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
 import logging

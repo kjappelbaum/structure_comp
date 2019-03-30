@@ -7,7 +7,7 @@ before_install:
 - pip install -U pip wheel setuptools
 
 install:
-  - pip install .
+  - pip install .[testing]
   - pip install coveralls
 # command to run tests
 script:
