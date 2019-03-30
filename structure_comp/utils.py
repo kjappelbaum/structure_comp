@@ -67,14 +67,17 @@ def kl_divergence(array_1, array_2, bins=None):
     KL divergence could be used a measure of covariate shift.
     """
 
+    minimum =min([min(array_1), min(array_2)])
+    maximum = max([max(array_1), max(array_2)])
+
     if bins is None:
         if len(array_1) < len(array_2):
             bins = get_number_bins(array_1)
         else:
             bins = get_number_bins(array_2)
 
-    a = np.histogram(array_1, bins=bins)
-    b = np.histogram(array_2, bins=bins)
+    a = np.histogram(array_1, bins=bins, range=(minimum, maximum))[0]
+    b = np.histogram(array_2, bins=bins, range=(minimum, maximum))[0]
 
     return stats.entropy(a, b)
 
