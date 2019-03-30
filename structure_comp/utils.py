@@ -62,16 +62,16 @@ def get_number_bins(array):
     return (max(array) - min(array)) / h
 
 
-def kl_divergence(array_1, array_2, len=None):
+def kl_divergence(array_1, array_2, bins=None):
     """
     KL divergence could be used a measure of covariate shift.
     """
 
-    if len is None:
+    if bins is None:
         if len(array_1) < len(array_2):
-            len = get_number_bins(array_1)
+            bins = get_number_bins(array_1)
         else:
-            len = get_number_bins(array_2)
+            bins = get_number_bins(array_2)
 
     a = np.histogram(array_1, bins=len)
     b = np.histogram(array_2, bins=len)
@@ -90,7 +90,7 @@ def tanimoto_distance(array_1, array_2):
 
     """
     xy = np.dot(array_1, array_2)
-    return xy / (np.linalg.norm(array_1) + np.linalg.norm(array_2) - xy)
+    return xy / (np.sum(array_1**2) + np.sum(array_2**2) - xy)
 
 
 def get_hash(structure: Structure):

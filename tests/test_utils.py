@@ -96,6 +96,6 @@ def test_tanimoto_distance(get_distributions):
         for j, dist_b in enumerate(get_distributions):
             tanimototo = tanimoto_distance(dist_a, dist_b)
             if i == j:
-                assert pytest.approx(tanimototo, 0.0001) == 0.0
+                assert pytest.approx(tanimototo, 0.0001) == 1
             else:
-                assert tanimototo > 0
+                assert tanimototo < 1 
