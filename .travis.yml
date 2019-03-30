@@ -2,6 +2,10 @@ language: python
 python:
   - "3.6"
 
+before_install:
+# Upgrade pip setuptools and wheel
+- pip install -U pip wheel setuptools
+
 install:
   - pip install .
   - pip install coveralls

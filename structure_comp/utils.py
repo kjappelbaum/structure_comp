@@ -15,6 +15,7 @@ from .rmsd import parse_periodic_case, rmsd
 from pymatgen import Structure
 import numpy as np
 import concurrent.futures
+from sklearn.neighbors import KernelDensity
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
 import logging
@@ -45,7 +46,6 @@ def get_rmsd(structure_a: Structure, structure_b: Structure) -> float:
 
 def closest_index(array, target):
     return np.argmin(np.abs(array - target))
-
 
 
 def kde_probability_observation(observations, other_observation) -> float:

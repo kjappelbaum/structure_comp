@@ -7,7 +7,7 @@ setup(
     url='',
     license='MIT License',
     install_requires=[
-        'numpy', 'pymatgen', 'ase', 'tqdm', 'pandas', 'scipy', 'scikit-learn'
+        'pymatgen', 'numpy',  'ase', 'tqdm', 'pandas', 'scipy', 'scikit-learn'
     ],
     extras_require={
         'testing': ['pytest'],

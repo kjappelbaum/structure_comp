@@ -13,7 +13,8 @@ import numpy as np
 import os
 from pymatgen import Structure
 from glob import glob
-from structure_comp.utils import get_hash, get_rmsd
+from structure_comp.utils import get_hash, get_rmsd, kde_probability_observation, kl_divergence
+from scipy import stats
 
 THIS_DIR = os.path.dirname(__file__)
 
@@ -24,6 +25,19 @@ def get_all_structures():
     for structure in structure_list:
         crystal_list.append(Structure.from_file(structure))
     return crystal_list
+
+@pytest.fixture
+def get_distributions():
+    x = np.linspace(-5, 5, 100)
+
+    t1 = stats.norm(0, 1)
+    t2 = stats.expon(1.9)
+    normal_dist = np.random.normal(0, 1, size=100)
+    exponential_dist = np.random.exponential(1.9, size=100)
+    t1_dist = t1.pdf(x)
+    t2_dist = t2.pdf(x)
+
+    return [t1_dist, t2_dist, normal_dist, exponential_dist]
 
 def test_get_hash(get_all_structures):
     """
@@ -53,3 +67,30 @@ def test_rmsd(get_all_structures):
 
     assert sum(np.diag(comp_matrix)) == 0
     assert np.allclose(comp_matrix, comp_matrix.T, atol=1e-8)
+
+def test_kde_probability_observation(get_distributions):
+    """
+    Check that probabilty for observing the same distribution is one, regardless of test order and that for off-diagonal
+    it is smaller than one. For speed reasons, we test the sum and not the single elements.
+    """
+    comp_matrix = np.zeros(len(get_distributions), len(get_distributions))
+    for i, dist_a in enumerate(get_all_structures):
+        for j, dist_b in enumerate(get_all_structures):
+            comp_matrix[i][j] = kde_probability_observation(dist_a, dist_b)
+
+    assert pytest.approx(sum(np.diag(comp_matrix)), 0.1) == len(get_all_structures)
+    assert np.sum((comp_matrix-comp_matrix.T)) < len(get_distributions)**2 - len(get_distributions)
+
+
+def test_kl_divergence(get_distributions):
+    """
+    Check that probabilty for observing the same distribution is one, regardless of test order and that for off-diagonal
+    it is smaller than one. For speed reasons, we test the sum and not the single elements.
+    """
+    comp_matrix = np.zeros(len(get_distributions), len(get_distributions))
+    for i, dist_a in enumerate(get_all_structures):
+        for j, dist_b in enumerate(get_all_structures):
+            comp_matrix[i][j] = kl_divergence(dist_a, dist_b)
+
+    assert pytest.approx(sum(np.diag(comp_matrix)), 0.1) == 0
+
