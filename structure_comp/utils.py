@@ -58,7 +58,7 @@ def get_number_bins(array):
     Returns:
         number of bins
     """
-    h = 2 * stats.iqr(array) * len(array)**(1.0 / 3.0)
+    h = 2 * stats.iqr(array) * len(array)**(- 1.0 / 3.0)
     return int((max(array) - min(array)) / h)
 
 
