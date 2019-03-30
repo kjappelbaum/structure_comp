@@ -72,7 +72,7 @@ class RemoveDuplicates():
 
         """
         sl = get_structure_list(folder, extension)
-        return class_object(sl, cached, remove_reduced_structure_dir, method)
+        return class_object(sl, cached, method)
 
     # Implement some logic in case someone wants to compare dbs
     def __len__(self):

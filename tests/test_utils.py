@@ -98,4 +98,4 @@ def test_tanimoto_distance(get_distributions):
             if i == j:
                 assert pytest.approx(tanimototo, 0.0001) == 1
             else:
-                assert tanimototo < 1 
+                assert tanimototo < 1

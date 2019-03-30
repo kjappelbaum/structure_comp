@@ -73,8 +73,8 @@ def kl_divergence(array_1, array_2, bins=None):
         else:
             bins = get_number_bins(array_2)
 
-    a = np.histogram(array_1, bins=len)
-    b = np.histogram(array_2, bins=len)
+    a = np.histogram(array_1, bins=bins)
+    b = np.histogram(array_2, bins=bins)
 
     return stats.entropy(a, b)
 
