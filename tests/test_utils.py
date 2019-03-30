@@ -13,7 +13,7 @@ import numpy as np
 import os
 from pymatgen import Structure
 from glob import glob
-from structure_comp.utils import get_hash, get_rmsd, kde_probability_observation, kl_divergence, tanimoto_distance
+from structure_comp.utils import get_hash, get_rmsd, kl_divergence, tanimoto_distance
 from scipy import stats
 
 THIS_DIR = os.path.dirname(__file__)

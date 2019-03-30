@@ -49,10 +49,30 @@ def closest_index(array, target):
     return np.argmin(np.abs(array - target))
 
 
-def kl_divergence(array_1, array_2, len=20):
+def get_number_bins(array):
+    """
+    Get optimal number of bins according to the Freedman-Diaconis rule (https://en.wikipedia.org/wiki/Freedman%E2%80%93Diaconis_rule) 
+    Args:
+        array:
+
+    Returns:
+        number of bins
+    """
+    h = 2 * stats.iqr(array) * len(array)**(1.0 / 3.0)
+    return (max(array) - min(array)) / h
+
+
+def kl_divergence(array_1, array_2, len=None):
     """
     KL divergence could be used a measure of covariate shift.
     """
+
+    if len is None:
+        if len(array_1) < len(array_2):
+            len = get_number_bins(array_1)
+        else:
+            len = get_number_bins(array_2)
+
     a = np.histogram(array_1, bins=len)
     b = np.histogram(array_2, bins=len)
 
