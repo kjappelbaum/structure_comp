@@ -159,17 +159,17 @@ class RemoveDuplicates():
         logger.info('creating scalar features')
 
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            for structure, number_atoms, density in tqdm(
-                    executor.map(
-                        RemoveDuplicates.get_scalar_features_from_file,
-                        reduced_structure_list),
+            for structure, result in tqdm(
+                    zip(
+                        reduced_structure_list,
+                        executor.map(
+                            RemoveDuplicates.get_scalar_features_from_file,
+                            reduced_structure_list)),
                     total=len(reduced_structure_list)):
-                number_atoms, density = RemoveDuplicates.get_scalar_features(
-                    structure)
                 features = {
                     'name': structure,
-                    'number_atoms': number_atoms,
-                    'density': density
+                    'number_atoms': result[0],
+                    'density': result[1]
                 }
                 feature_list.append(features)
 
@@ -202,7 +202,7 @@ class RemoveDuplicates():
 
     @staticmethod
     def get_scalar_distance_matrix(scalar_feature_df: pd.DataFrame,
-                                   threshold: float = 0.1) -> list:
+                                   threshold: float = 0.5) -> list:
         """
         Get structures that probably have the same composition.
 
@@ -214,13 +214,11 @@ class RemoveDuplicates():
             list of tuples which Euclidean distance is under threshold
 
         """
-        logger.debug('columns of dataframe are {}'.format(
-            scalar_feature_df.columns))
         distances = pdist(
             scalar_feature_df.drop(columns=['name']).values,
             metric='euclidean')
         dist_matrix = squareform(distances)
-        i, j = np.where(dist_matrix < threshold)
+        i, j = np.where(dist_matrix + np.eye(len(dist_matrix)) < threshold)
         logger.debug('found {} and {} composition duplicates'.format(i, j))
         return list(set(map(tuple, map(sorted, list(zip(i,
                                                         j))))))  # super ugly
@@ -251,44 +249,43 @@ class RemoveDuplicates():
                     pairs.append(items)
         return pairs
 
-    @staticmethod
-    def compare_graph_pair(items, scalar_feature_df):
-
+    def compare_graph_pair(self, items):
         nn_strategy = JmolNN()
         crystal_a = Structure.from_file(
-            scalar_feature_df.iloc[items[0]]['name'])
+            self.scalar_feature_matrix.iloc[items[0]]['name'])
         crystal_b = Structure.from_file(
-            scalar_feature_df.iloc[items[1]]['name'])
+            self.scalar_feature_matrix.iloc[items[1]]['name'])
         sgraph_a = StructureGraph.with_local_env_strategy(
             crystal_a, nn_strategy)
         sgraph_b = StructureGraph.with_local_env_strategy(
             crystal_b, nn_strategy)
         try:
             if sgraph_a == sgraph_b:
+                logger.debug('Found duplicate')
                 return items
         except ValueError:
             logger.debug('Structures were probably not different')
             return None
 
-    def compare_graph_pair_cached(self, items, scalar_feature_df):
+    def compare_graph_pair_cached(self, items):
         nn_strategy = JmolNN()
-        crystal_a = self.reduced_structure_dict[scalar_feature_df.iloc[
-            items[0]]['name']]
-        crystal_b = self.reduced_structure_dict[scalar_feature_df.iloc[
-            items[1]]['name']]
+        crystal_a = self.reduced_structure_dict[self.scalar_feature_matrix.
+                                                iloc[items[0]]['name']]
+        crystal_b = self.reduced_structure_dict[self.scalar_feature_matrix.
+                                                iloc[items[1]]['name']]
         sgraph_a = StructureGraph.with_local_env_strategy(
             crystal_a, nn_strategy)
         sgraph_b = StructureGraph.with_local_env_strategy(
             crystal_b, nn_strategy)
         try:
             if sgraph_a == sgraph_b:
+                logger.debug('Found duplicate')
                 return items
         except ValueError:
             logger.debug('Structures were probably not different')
             return None
 
-    def compare_graphs(self, tupellist: list,
-                       scalar_feature_df: pd.DataFrame) -> list:
+    def compare_graphs(self, tupellist: list) -> list:
         """
 
         Args:
@@ -303,16 +300,14 @@ class RemoveDuplicates():
         with concurrent.futures.ThreadPoolExecutor() as executor:
             if not self.cached:
                 for items, result in tqdm(
-                        executor.map(RemoveDuplicates.compare_graph_pair,
-                                     tupellist, scalar_feature_df),
+                        executor.map(self.compare_graph_pair, tupellist),
                         total=len(tupellist)):
                     if result:
                         pairs.append(result)
             else:
                 for items, result in tqdm(
-                        executor.map(
-                            RemoveDuplicates.compare_graph_pair_cached,
-                            tupellist, scalar_feature_df),
+                        executor.map(self.compare_graph_pair_cached,
+                                     tupellist),
                         total=len(tupellist)):
                     if result:
                         pairs.append(result)
@@ -349,8 +344,11 @@ class RemoveDuplicates():
                 logger.debug('we have {} reduced structures'.format(
                     len(self.reduced_structure_list)))
 
-            self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df(
-                self.reduced_structure_list)
+                self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df(
+                    self.reduced_structure_list)
+            else:
+                self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df_cached(
+                    self.reduced_structure_dict)
 
             logger.debug('columns of dataframe are {}'.format(
                 self.scalar_feature_matrix.columns))
@@ -358,8 +356,7 @@ class RemoveDuplicates():
             self.similar_composition_tuples = RemoveDuplicates.get_scalar_distance_matrix(
                 self.scalar_feature_matrix)
 
-            self.pairs = RemoveDuplicates.compare_graphs(
-                self.similar_composition_tuples, self.scalar_feature_matrix)
+            self.pairs = self.compare_graphs(self.similar_composition_tuples)
 
         elif self.method == 'graph_hash':
             RemoveDuplicates.get_graph_hash_dict(self.structure_list)

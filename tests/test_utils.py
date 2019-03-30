@@ -18,8 +18,9 @@ from scipy import stats
 
 THIS_DIR = os.path.dirname(__file__)
 
-@pytest.fixture
-def get_all_structures():
+
+@pytest.fixture(scope='module')
+def get_all_structures() -> list:
     crystal_list = []
     structure_list = glob(os.path.join(THIS_DIR, 'structures', '.cif'))
     for structure in structure_list:
@@ -40,11 +41,12 @@ def get_distributions():
 
     return [t1_dist, t2_dist, normal_dist, exponential_dist]
 
+
 def test_get_hash(get_all_structures):
     """
     For all structures make sure that the hash is only identical to the structure itself.
     """
-    comp_matrix = np.zeros(len(get_all_structures), len(get_all_structures))
+    comp_matrix = np.zeros((len(get_all_structures), len(get_all_structures)))
     for i, structure_a in enumerate(get_all_structures):
         for j, structure_b in enumerate(get_all_structures):
             if i < j:
@@ -56,12 +58,13 @@ def test_get_hash(get_all_structures):
                     comp_matrix[i][j] = 0
     assert sum(comp_matrix) == sum(np.diag(comp_matrix))
 
-def test_rmsd(get_all_structures):
+
+def test_get_rmsd(get_all_structures):
     """
     For all structures make sure that the RMSD is null on the diagonal and not null on the off-diagonal elements.
     Make sure that result is symmetric.
     """
-    comp_matrix = np.zeros(len(get_all_structures), len(get_all_structures))
+    comp_matrix = np.zeros((len(get_all_structures), len(get_all_structures)))
     for i, structure_a in enumerate(get_all_structures):
         for j, structure_b in enumerate(get_all_structures):
             comp_matrix[i][j] = get_rmsd(structure_a, structure_b)
@@ -69,18 +72,22 @@ def test_rmsd(get_all_structures):
     assert sum(np.diag(comp_matrix)) == 0
     assert np.allclose(comp_matrix, comp_matrix.T, atol=1e-8)
 
+
 def test_kde_probability_observation(get_distributions):
     """
     Check that probabilty for observing the same distribution is one, regardless of test order and that for off-diagonal
     it is smaller than one. For speed reasons, we test the sum and not the single elements.
     """
-    comp_matrix = np.zeros(len(get_distributions), len(get_distributions))
-    for i, dist_a in enumerate(get_all_structures):
-        for j, dist_b in enumerate(get_all_structures):
+    comp_matrix = np.zeros((len(get_distributions), len(get_distributions)))
+    for i, dist_a in enumerate(get_distributions):
+        for j, dist_b in enumerate(get_distributions):
             comp_matrix[i][j] = kde_probability_observation(dist_a, dist_b)
 
-    assert pytest.approx(sum(np.diag(comp_matrix)), 0.1) == len(get_all_structures)
-    assert np.sum((comp_matrix-comp_matrix.T)) < len(get_distributions)**2 - len(get_distributions)
+    assert pytest.approx(sum(np.diag(comp_matrix)),
+                         0.1) == len(get_distributions)
+    assert np.sum(
+        (comp_matrix -
+         comp_matrix.T)) < len(get_distributions)**2 - len(get_distributions)
 
 
 def test_kl_divergence(get_distributions):
@@ -88,25 +95,24 @@ def test_kl_divergence(get_distributions):
     Check that probabilty for observing the same distribution is one, regardless of test order and that for off-diagonal
     it is smaller than one. For speed reasons, we test the sum and not the single elements.
     """
-    for i, dist_a in enumerate(get_all_structures):
-        for j, dist_b in enumerate(get_all_structures):
+    for i, dist_a in enumerate(get_distributions):
+        for j, dist_b in enumerate(get_distributions):
             kl = kl_divergence(dist_a, dist_b)
             if i == j:
                 assert pytest.approx(kl, 0.0001) == 0.0
             else:
                 assert kl > 0
 
+
 def test_tanimoto_distance(get_distributions):
     """
     Check that probabilty for observing the same distribution is one, regardless of test order and that for off-diagonal
     it is smaller than one. For speed reasons, we test the sum and not the single elements.
     """
-    for i, dist_a in enumerate(get_all_structures):
-        for j, dist_b in enumerate(get_all_structures):
+    for i, dist_a in enumerate(get_distributions):
+        for j, dist_b in enumerate(get_distributions):
             tanimototo = tanimoto_distance(dist_a, dist_b)
             if i == j:
                 assert pytest.approx(tanimototo, 0.0001) == 0.0
             else:
                 assert tanimototo > 0
-
-

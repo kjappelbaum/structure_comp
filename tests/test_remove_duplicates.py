@@ -21,8 +21,12 @@ def test_structure_folder():
     rd_object_1 = RemoveDuplicates(structure_list, cached=True, method='standard')
     rd_object_2 = RemoveDuplicates(structure_list, cached=False, method='standard')
 
-    #rd_object_1.run_filtering()
+    rd_object_1.run_filtering()
+    assert rd_object_1.number_of_duplicates == 0
     rd_object_2.run_filtering()
+    assert rd_object_2.number_of_duplicates == 0
+    assert not (rd_object_1.number_of_duplicates > rd_object_2.number_of_duplicates)
+    assert not (rd_object_1.number_of_duplicates < rd_object_2.number_of_duplicates)
 
 # Make sure that structures are removed if they are supercells
 def all_supercells_test():
