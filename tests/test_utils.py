@@ -26,6 +26,7 @@ def get_all_structures():
         crystal_list.append(Structure.from_file(structure))
     return crystal_list
 
+
 @pytest.fixture
 def get_distributions():
     x = np.linspace(-5, 5, 100)

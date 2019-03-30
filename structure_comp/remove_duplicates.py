@@ -35,7 +35,9 @@ logger.setLevel(logging.DEBUG)
 class RemoveDuplicates():
     """
     A RemoveDuplicates object operates on a collection of structure and allows
-        - Removal of duplicates on the collection of structures using different methods
+        - Removal of duplicates on the collection of structures using different methods, using the main
+        function run_filtering()
+
         - Basic comparisons between different RemoveDuplicates objects (e.g. comparing which one contains more duplicates)
     """
 
@@ -102,6 +104,7 @@ class RemoveDuplicates():
         """
         if not self.cached:
             self.tempdirpath = tempfile.mkdtemp()
+            self.reduced_structure_dir = self.tempdirpath
         logger.info('creating reduced structures')
         for structure in tqdm(self.structure_list):
             sname = Path(structure).name
@@ -202,9 +205,14 @@ class RemoveDuplicates():
                                    threshold: float = 0.1) -> list:
         """
         Get structures that probably have the same composition.
-        :param scalar_feature_df: pandas Dataframe object with the scalar features
-        :param threshold: threshold for the euclidian distance between structure features
-        :return: list of tuples which euclidian distance is under threshold
+
+        Args:
+            scalar_feature_df: pandas Dataframe object with the scalar features
+            threshold: threshold: threshold for the Euclidean distance between structure features
+
+        Returns:
+            list of tuples which Euclidean distance is under threshold
+
         """
         logger.debug('columns of dataframe are {}'.format(
             scalar_feature_df.columns))
@@ -333,11 +341,13 @@ class RemoveDuplicates():
         logger.info('running filtering workflow')
 
         if self.method == 'standard':
-            RemoveDuplicates.get_reduced_structures()
+            self.get_reduced_structures()
 
             if not self.cached:
                 self.reduced_structure_list = get_structure_list(
                     self.reduced_structure_dir)
+                logger.debug('we have {} reduced structures'.format(
+                    len(self.reduced_structure_list)))
 
             self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df(
                 self.reduced_structure_list)
