@@ -52,12 +52,14 @@ class RemoveDuplicates():
         self.pairs = None
         self.method = method
 
+    def __repr__(self):
+        return f'RemoveDuplicates on {len(self.structure_list)!r} structures'
+
     @classmethod
-    def from_folder(class_object,
+    def from_folder(cls,
                     folder,
                     cached: bool = False,
-                    extension='.cif',
-                    remove_reduced_structure_dir: bool = True,
+                    extension='cif',
                     method='standard'):
         """
 
@@ -72,11 +74,14 @@ class RemoveDuplicates():
 
         """
         sl = get_structure_list(folder, extension)
-        return class_object(sl, cached, method)
+        return cls(sl, cached, method)
 
     # Implement some logic in case someone wants to compare dbs
     def __len__(self):
-        return len(self.pairs)
+        if self.pairs is not None:
+            return len(self.pairs)
+        else:
+            return 0
 
     def __eq__(self, other):
         return set(self.pairs) == set(other.pairs)

@@ -130,7 +130,7 @@ class Sampler():
 
         Args:
             path (str): path to the structure directory
-            extension (str): extension (with the leading dot, e.g. '.cif')
+            extension (str): extension (without the leading dot, e.g. 'cif')
             mode (str): visualization mode for the structures
 
         Returns:
@@ -141,4 +141,4 @@ class Sampler():
                 for item in self.selection:
                     fig, axarr = plt.subplots(1, 1, figsize=(15, 15))
                     plt.title(item)
-                    plot_atoms(read(os.path.join(path, ''.join([item, extension]))), axarr)
+                    plot_atoms(read(os.path.join(path, '.'.join([item, extension]))), axarr)

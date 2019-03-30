@@ -59,7 +59,7 @@ def get_number_bins(array):
         number of bins
     """
     h = 2 * stats.iqr(array) * len(array)**(1.0 / 3.0)
-    return (max(array) - min(array)) / h
+    return int((max(array) - min(array)) / h)
 
 
 def kl_divergence(array_1, array_2, bins=None):

@@ -18,17 +18,37 @@ THIS_DIR = os.path.dirname(__file__)
 # compare all structures in structure folder, there should be now duplicates
 def test_structure_folder():
     structure_list = get_structure_list(os.path.join(THIS_DIR, 'structures'))
-    rd_object_1 = RemoveDuplicates(structure_list, cached=True, method='standard')
-    rd_object_2 = RemoveDuplicates(structure_list, cached=False, method='standard')
+    rd_object_1 = RemoveDuplicates(
+        structure_list, cached=True, method='standard')
+    rd_object_2 = RemoveDuplicates(
+        structure_list, cached=False, method='standard')
 
     rd_object_1.run_filtering()
     assert rd_object_1.number_of_duplicates == 0
     rd_object_2.run_filtering()
     assert rd_object_2.number_of_duplicates == 0
-    assert not (rd_object_1.number_of_duplicates > rd_object_2.number_of_duplicates)
-    assert not (rd_object_1.number_of_duplicates < rd_object_2.number_of_duplicates)
+    assert not (rd_object_1.number_of_duplicates >
+                rd_object_2.number_of_duplicates)
+    assert not (rd_object_1.number_of_duplicates <
+                rd_object_2.number_of_duplicates)
+
+
+def test_structure_folder_2():
+    rd_object_1 = RemoveDuplicates.from_folder(
+        os.path.join(THIS_DIR, 'structures'), cached=True, method='standard')
+    rd_object_2 = RemoveDuplicates.from_folder(
+        os.path.join(THIS_DIR, 'structures'), cached=False, method='standard')
+
+    rd_object_1.run_filtering()
+    assert rd_object_1.number_of_duplicates == 0
+    rd_object_2.run_filtering()
+    assert rd_object_2.number_of_duplicates == 0
+    assert not (rd_object_1.number_of_duplicates >
+                rd_object_2.number_of_duplicates)
+    assert not (rd_object_1.number_of_duplicates <
+                rd_object_2.number_of_duplicates)
+
 
 # Make sure that structures are removed if they are supercells
 def all_supercells_test():
     pass
-
