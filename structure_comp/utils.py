@@ -94,10 +94,13 @@ def kl_divergence(array_1, array_2):
 
 def tanimoto_distance(array_1, array_2):
     """
-    Continous form of the Tanimoto distance measure.
-    :param array_1:
-    :param array_2:
-    :return:
+    Continuous form of the Tanimoto distance measure.
+    Args:
+        array_1:
+        array_2:
+
+    Returns:
+
     """
     xy = np.dot(array_1, array_2)
     return xy / (np.abs(array_1) + np.abs(array_2) - xy)
