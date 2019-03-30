@@ -51,6 +51,7 @@ class RemoveDuplicates():
         self.cached = cached
         self.pairs = None
         self.method = method
+        self.similar_composition_tuples = []
 
     def __repr__(self):
         return f'RemoveDuplicates on {len(self.structure_list)!r} structures'
@@ -375,6 +376,8 @@ class RemoveDuplicates():
 
             self.similar_composition_tuples = RemoveDuplicates.get_scalar_distance_matrix(
                 self.scalar_feature_matrix)
+
+            logger.debug('similiar composition tuples are'.format(self.similar_composition_tuples))
 
             self.pairs = self.compare_graphs(self.similar_composition_tuples)
 
