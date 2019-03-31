@@ -9,6 +9,7 @@ __date__ = '28.03.19'
 __status__ = 'First Draft, Testing'
 
 import os
+import pytest
 from structure_comp.utils import get_structure_list
 from structure_comp.remove_duplicates import RemoveDuplicates
 THIS_DIR = os.path.dirname(__file__)
@@ -68,6 +69,22 @@ def test_structure_folder_3():
                 rd_object_2.number_of_duplicates)
 
 
-# Make sure that structures are removed if they are supercells
-def all_supercells_test():
-    pass
+# Check supercell handling 
+@pytest.mark.slow
+def test_supercells():
+    structure_list = get_structure_list(os.path.join(
+        THIS_DIR, 'structures_supercells'))
+
+    rd_object_1 = RemoveDuplicates(
+        structure_list, cached=True, method='standard')
+    rd_object_2 = RemoveDuplicates(
+        structure_list, cached=False, method='standard')
+
+    rd_object_1.run_filtering()
+    assert rd_object_1.number_of_duplicates == 0
+    rd_object_2.run_filtering()
+    assert rd_object_2.number_of_duplicates == 0
+    assert not (rd_object_1.number_of_duplicates >
+                rd_object_2.number_of_duplicates)
+    assert not (rd_object_1.number_of_duplicates <
+                rd_object_2.number_of_duplicates)

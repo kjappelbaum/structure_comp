@@ -6,7 +6,7 @@
 # directly copied from aforementioned repository
 
 import copy
-
+from math import isclose
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from scipy.spatial.distance import cdist
@@ -600,13 +600,31 @@ def print_coordinates(atoms, V, title=""):
 
     return
 
-def parse_periodic_case(file_1, file_2):
+def parse_periodic_case(file_1, file_2, try_supercell=True):
+    """
+    Parser for periodic structures, handles two possible cases:
+        (1) Structures are supercells (within tolerance), then one cell is multiplied by the scaling factors
+        (2) Structures are not supercells of each other, then we rescale on cell to the volume of the other cell
+        to make sure we have meaningful comparisons.
+
+    Args:
+        file_1 (str): path to first file, in on format that ASE can parse
+        file_2 (str): path to second file
+        try_supercell (bool): if true, we attempt to build a supercell, default: True
+
+    Returns:
+        atomic symbols (list), cartesian postions (list) of structure 1,
+        atomic symbols (list), cartesian positions (list) of structure 2
+    """
     atoms1 = read(file_1)
     atoms2 = read(file_2)
     niggli_reduce(atoms1)
     niggli_reduce(atoms2)
 
-    a1, a2 = rescale_periodic_system(atoms1, atoms2)
+    if try_supercell:
+        a1, a2 = attempt_supercell(atoms1, atoms2)
+    else:
+        a1, a2 = rescale_periodic_system(atoms1, atoms2)
 
     atomic_symbols_1 = a1.get_chemical_symbols()
     positions_1 = a1.get_positions()
@@ -615,6 +633,42 @@ def parse_periodic_case(file_1, file_2):
     positions_2 = a2.get_positions()
 
     return atomic_symbols_1, positions_1, atomic_symbols_2, positions_2
+
+
+def attempt_supercell(atoms1, atoms2):
+    """
+    Checks if the lattice vectors of one cell are integer multiples of the other cell.
+    For this to be meaningful, the lattices should be Niggli reduced.
+
+    To get the order of the check correct without to many checks, we use the volume.
+    Args:
+        atoms1 (ase atoms object):
+        atoms2 (ase atoms object):
+
+    Returns:
+
+    """
+    lattice1 = atoms1.get_cell_lengths_and_angles()[0:3]
+    lattice2 = atoms2.get_cell_lengths_and_angles()[0:3]
+
+    one_larger_than_two = False
+
+    if atoms1.get_volume() > atoms2.get_volume():
+        factors = lattice1 / lattice2
+        one_larger_than_two = True
+    else:
+        factors = lattice2 / lattice1
+
+    x = np.array(factors)
+    x_int = x.astype(int)
+    if np.all(np.isclose(x, x_int, 0.001)):
+        x = x_int
+        if one_larger_than_two:
+            atoms2 = atoms2 * x
+        else:
+            atoms1 = atoms1 * x
+
+    return atoms1, atoms2
 
 def rescale_periodic_system(atoms1, atoms2):
     """
@@ -625,7 +679,6 @@ def rescale_periodic_system(atoms1, atoms2):
     of atoms in both cells is the same. Later, I will
     create supercells to fix this.
 
-    ToDo: First get Niggli cells for both structures
 
     Parameters
     ----------
@@ -637,8 +690,6 @@ def rescale_periodic_system(atoms1, atoms2):
         atoms1_copy: ASE atoms object
         atoms2: ASE atoms object
     """
-
-    #if len(atoms1) == len(atoms2):
     atoms1_copy = atoms1.copy()
     atoms1_copy.set_cell(atoms2.get_cell(), scale_atoms=True)
 

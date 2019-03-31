@@ -140,9 +140,9 @@ class RemoveDuplicates():
         Returns:
 
         """
-        number_atoms = structure.num_sites
+        symbol_hash = hash(structure.symbol_set)
         density = structure.density
-        return number_atoms, density
+        return symbol_hash, density
 
     @staticmethod
     def get_scalar_features_from_file(structure_file):
@@ -155,9 +155,9 @@ class RemoveDuplicates():
 
         """
         structure = Structure.from_file(structure_file)
-        number_atoms = structure.num_sites
+        symbol_hash = hash(structure.symbol_set)
         density = structure.density
-        return number_atoms, density
+        return symbol_hash, density
 
     @staticmethod
     def get_scalar_df(reduced_structure_list: list):
@@ -182,11 +182,12 @@ class RemoveDuplicates():
                     total=len(reduced_structure_list)):
                 features = {
                     'name': structure,
-                    'number_atoms': result[0],
+                    'symbol_hash': result[0],
                     'density': result[1]
                 }
                 feature_list.append(features)
             df = pd.DataFrame(feature_list)
+            logger.debug('the dataframe looks like %s', df.head())
         return df
 
     @staticmethod
@@ -203,16 +204,16 @@ class RemoveDuplicates():
         logger.info('creating scalar features')
         for structure in tqdm(reduced_structure_dict):
             crystal = reduced_structure_dict[structure]
-            number_atoms, density = RemoveDuplicates.get_scalar_features(
+            symbol_hash, density = RemoveDuplicates.get_scalar_features(
                 crystal)
             features = {
                 'name': structure,
-                'number_atoms': number_atoms,
+                'symbol_hash': symbol_hash,
                 'density': density
             }
             feature_list.append(features)
         df = pd.DataFrame(feature_list)
-        logger.debug('The df looks like'.format(df.head()))
+        logger.debug('the dataframe looks like %s', df.head())
 
         return df
 

@@ -21,11 +21,50 @@ for clever sampling. This is what the :code:`sampling` module tries to do.
 Duplicate removal
 -----------------
 
+The approach in the main duplicate removal routines is the following:
+
+1. get the the Niggli reduced cell to have the smallest possible, well defined structure
+2. get some cheap scalar features that describe the composition and use them to filter out
+   structures that probably have the same composition.
+3. after we identified the structures with identical composition (which are usually not too many)
+   we can run a more expensive structural comparisons using structure graphs or the Kabsch algorithm
+
+
 Kabsch algorithm
 .................
 
+The Kabsch algorithm :cite:`kabsch_solution_1976,kabsch_discussion_1978` attempts to solve the problem of calculating the RMSD between to structures,
+which is in general not well defined as it depends on the relative orientations of the structures w.r.t
+each other. The algorithm calculates the optimal rotation matrix that mininmizes the RMSD between the structures and
+it is often used in visualizations to e.g. align structures. The basic idea behind the algorithm is the following:
+
+1. First we center the structures at the origin
+2. Then, we calculate the covariance matrix
+
+   .. math::
+
+     \mathbf{H}_ij =  \sum_{k}^N \mathbf{P}_{ki} \mathbf{Q}_{kj}
+
+   where :math:`P_{ki}` and :math:`Q_{kj}` are the point-clouds (position coordinates) of the two
+   structures.
+3. The optimal rotation matrix is then given by
+
+   .. math::
+
+     \mathbf{R} = \left(\mathbf{H}^\mathsf{T}\mathbf{H} \right)^{\frac{1}{2}} \mathbf{H}^{-1}
+
+   which can be implemented using a SVD decomposition.
+
+
+
+
+The implementation in this package is based on the rmsd package from Jimmy Charnley Kromann :cite:`kromann_calculate_2019`, we just added routines for
+periodic cases.
+
+
 Graph based
 ...........
+
 
 Hashing
 .......
