@@ -6,12 +6,15 @@
 # directly copied from aforementioned repository
 
 import copy
-from math import isclose
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from scipy.spatial.distance import cdist
 from ase.io import read
 from ase.build import niggli_reduce
+from numba import jit
+import logging
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 AXIS_SWAPS = np.array([[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 1, 0],
                        [2, 0, 1]])
@@ -20,8 +23,7 @@ AXIS_REFLECTIONS = np.array([[1, 1, 1], [-1, 1, 1], [1, -1, 1], [1, 1, -1],
                              [-1, -1, 1], [-1, 1, -1], [1, -1, -1],
                              [-1, -1, -1]])
 
-
-def rmsd(V, W):
+def rmsd(V: np.array, W: np.array):
     """
     Calculate Root-mean-square deviation from two sets of vectors V and W.
 
@@ -40,11 +42,11 @@ def rmsd(V, W):
     D = len(V[0])
     N = len(V)
     result = 0.0
-    for v, w in zip(V, W):
-        result += sum([(v[i] - w[i])**2.0 for i in range(D)])
-    return np.sqrt(result / N)
+    result = np.sqrt(((V - W) ** 2).mean())
 
+    return result / N
 
+@jit
 def kabsch_rmsd(P, Q, translate=False):
     """
     Rotate matrix P unto Q using Kabsch algorithm and calculate the RMSD.
@@ -63,6 +65,7 @@ def kabsch_rmsd(P, Q, translate=False):
     rmsd : float
         root-mean squared deviation
     """
+    logger.debug('I am now in the Kabsch routine')
     if translate:
         Q = Q - centroid(Q)
         P = P - centroid(P)
@@ -247,6 +250,7 @@ def centroid(X):
     return C
 
 
+@jit
 def reorder_distance(p_atoms, q_atoms, p_coord, q_coord):
     """
     Re-orders the input atom list and xyz coordinates by atom type and then by
@@ -356,7 +360,7 @@ def reorder_hungarian(p_atoms, q_atoms, p_coord, q_coord):
 
     return view_reorder
 
-
+@jit
 def generate_permutations(elements, n):
     """
     Heap's algorithm for generating all n! permutations in a list
@@ -613,9 +617,10 @@ def parse_periodic_case(file_1, file_2, try_supercell=True):
         try_supercell (bool): if true, we attempt to build a supercell, default: True
 
     Returns:
-        atomic symbols (list), cartesian postions (list) of structure 1,
+        atomic symbols (list), cartesian positions (list) of structure 1,
         atomic symbols (list), cartesian positions (list) of structure 2
     """
+
     atoms1 = read(file_1)
     atoms2 = read(file_2)
     niggli_reduce(atoms1)
@@ -663,6 +668,7 @@ def attempt_supercell(atoms1, atoms2):
     x_int = x.astype(int)
     if np.all(np.isclose(x, x_int, 0.001)):
         x = x_int
+        logger.debug('found supercell with scaling factors %s', x)
         if one_larger_than_two:
             atoms2 = atoms2 * x
         else:

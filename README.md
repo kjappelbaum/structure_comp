@@ -1,4 +1,4 @@
-# Remove duplicates
+# structure_comp 
 
 [![Documentation Status](https://readthedocs.org/projects/structure-comp/badge/?version=latest)](https://structure-comp.readthedocs.io/en/latest/?badge=latest)
 [![Build Status](https://travis-ci.com/kjappelbaum/structure_comp.svg?branch=master)](https://travis-ci.com/kjappelbaum/structure_comp)

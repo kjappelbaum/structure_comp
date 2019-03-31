@@ -9,7 +9,7 @@ __date__ = '28.03.19'
 __status__ = 'First Draft, Testing'
 
 import pytest
-from structure_comp.rmsd import attempt_supercell, parse_periodic_case, rmsd
+from structure_comp.rmsd import attempt_supercell, parse_periodic_case, rmsd, kabsch_rmsd
 from ase.io import read
 from ase.build import niggli_reduce
 import os
@@ -37,9 +37,7 @@ def test_attempt_supercell(get_supercell_paths):
 
 
 def test_rmsd(get_supercell_paths):
-    p_atoms, P, q_atoms, Q = parse_periodic_case(
-        get_supercell_paths[0],
-        get_supercell_paths[1])
-    result = rmsd(P, Q)
-
+    _, P, _, Q = parse_periodic_case(get_supercell_paths[0],
+                                     get_supercell_paths[1])
+    result = kabsch_rmsd(P, Q)
     assert pytest.approx(result, abs=0.01) == 0.0

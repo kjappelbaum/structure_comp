@@ -24,7 +24,7 @@ from ase.io import read
 import matplotlib.pyplot as plt
 from tqdm.autonotebook import tqdm
 import pandas as pd
-from .rmsd import parse_periodic_case, rmsd
+from .rmsd import parse_periodic_case, kabsch_rmsd
 from .utils import get_structure_list, get_hash
 from collections import defaultdict
 
@@ -44,7 +44,8 @@ class RemoveDuplicates():
     def __init__(self,
                  structure_list: list,
                  cached: bool = False,
-                 method='standard'):
+                 method='standard',
+                 try_supercell=True):
 
         self.structure_list = structure_list
         self.reduced_structure_dict = {}
@@ -52,6 +53,7 @@ class RemoveDuplicates():
         self.pairs = None
         self.method = method
         self.similar_composition_tuples = []
+        self.try_supercell = try_supercell
 
     def __repr__(self):
         return f'RemoveDuplicates on {len(self.structure_list)!r} structures'
@@ -243,13 +245,15 @@ class RemoveDuplicates():
     @staticmethod
     def compare_rmsd(tupellist: list,
                      scalar_feature_df: pd.DataFrame,
-                     threshold: float = 0.2) -> list:
+                     threshold: float = 0.2,
+                     try_supercell: bool = True) -> list:
         """
 
         Args:
-            tupellist:
-            scalar_feature_df:
+            tupellist (list): list of indices of structures with identical compostion
+            scalar_feature_df (pandas dataframe):
             threshold:
+            try_supercell (bool): switch which control whether expansion to supercell is tested
 
         Returns:
 
@@ -258,11 +262,14 @@ class RemoveDuplicates():
         pairs = []
         for items in tqdm(tupellist):
             if items[0] != items[1]:
-                p_atoms, P, q_atoms, Q = parse_periodic_case(
+                _, P, _, Q = parse_periodic_case(
                     scalar_feature_df.iloc[items[0]]['name'],
-                    scalar_feature_df.iloc[items[1]]['name'])
-                result = rmsd(P, Q)
-                if result < threshold:
+                    scalar_feature_df.iloc[items[1]]['name'], try_supercell)
+                logger.debug('P is %s, Q is %s', P, Q)
+                logger.debug('Lengths are %s, %s', len(P), len(Q))
+                rmsd_result = kabsch_rmsd(P, Q)
+                logger.debug('The Kabsch RMSD is %s', rmsd_result)
+                if rmsd_result < threshold:
                     pairs.append(items)
         return pairs
 
@@ -366,30 +373,36 @@ class RemoveDuplicates():
         """
         logger.info('running filtering workflow')
 
+        self.get_reduced_structures()
+
+        if not self.cached:
+            self.reduced_structure_list = get_structure_list(
+                self.reduced_structure_dir)
+            logger.debug('we have %s reduced structures',
+                         len(self.reduced_structure_list))
+
+            self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df(
+                self.reduced_structure_list)
+        else:
+            logger.debug('we have %s reduced structures',
+                         len(self.reduced_structure_dict))
+            self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df_cached(
+                self.reduced_structure_dict)
+
+        logger.debug('columns of dataframe are %s',
+                     self.scalar_feature_matrix.columns)
+
+        self.similar_composition_tuples = RemoveDuplicates.get_scalar_distance_matrix(
+            self.scalar_feature_matrix)
+
         if self.method == 'standard':
-            self.get_reduced_structures()
-
-            if not self.cached:
-                self.reduced_structure_list = get_structure_list(
-                    self.reduced_structure_dir)
-                logger.debug('we have %s reduced structures',
-                             len(self.reduced_structure_list))
-
-                self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df(
-                    self.reduced_structure_list)
-            else:
-                logger.debug('we have %s reduced structures',
-                             len(self.reduced_structure_dict))
-                self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df_cached(
-                    self.reduced_structure_dict)
-
-            logger.debug('columns of dataframe are %s',
-                         self.scalar_feature_matrix.columns)
-
-            self.similar_composition_tuples = RemoveDuplicates.get_scalar_distance_matrix(
-                self.scalar_feature_matrix)
 
             self.pairs = self.compare_graphs(self.similar_composition_tuples)
+
+        elif self.method == 'rmsd':
+            self.pairs = RemoveDuplicates.compare_rmsd(
+                self.similar_composition_tuples, self.scalar_feature_matrix,
+                self.try_supercell)
 
         elif self.method == 'hash':
             RemoveDuplicates.get_graph_hash_dict(self.structure_list)
