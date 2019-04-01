@@ -5,13 +5,11 @@
 # the RMSD package (https://github.com/charnley/rmsd), most of the code in this module is
 # directly copied from aforementioned repository
 
-import copy
 import numpy as np
-from scipy.optimize import linear_sum_assignment
-from scipy.spatial.distance import cdist
 from ase.io import read
 from ase.build import niggli_reduce
 from numba import jit
+from pymatgen.io.ase import AseAtomsAdaptor
 import logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -22,6 +20,7 @@ AXIS_SWAPS = np.array([[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 1, 0],
 AXIS_REFLECTIONS = np.array([[1, 1, 1], [-1, 1, 1], [1, -1, 1], [1, 1, -1],
                              [-1, -1, 1], [-1, 1, -1], [1, -1, -1],
                              [-1, -1, -1]])
+
 
 def rmsd(V: np.array, W: np.array):
     """
@@ -39,12 +38,9 @@ def rmsd(V: np.array, W: np.array):
     rmsd : float
         Root-mean-square deviation between the two vectors
     """
-    D = len(V[0])
-    N = len(V)
-    result = 0.0
-    result = np.sqrt(((V - W) ** 2).mean())
 
-    return result / N
+    return np.sqrt(np.mean((np.subtract(V, W))**2))
+
 
 @jit
 def kabsch_rmsd(P, Q, translate=False):
@@ -66,7 +62,19 @@ def kabsch_rmsd(P, Q, translate=False):
         root-mean squared deviation
     """
     logger.debug('I am now in the Kabsch routine')
+    if P.shape[0] > Q.shape[0]:
+        logger.debug('Zero padded the Q array')
+        Q_temp = np.zeros(P.shape)
+        Q_temp[:Q.shape[0], :Q.shape[1]] = Q
+        Q = Q_temp
+    elif Q.shape[0] > P.shape[0]:
+        logger.debug('Zero padded the P array')
+        P_temp = np.zeros(Q.shape)
+        P_temp[:P.shape[0], :P.shape[1]] = P
+        P = P_temp
+
     if translate:
+        logger.debug('Perfoming translation move')
         Q = Q - centroid(Q)
         P = P - centroid(P)
 
@@ -92,6 +100,7 @@ def kabsch_rotate(P, Q):
         rotated
 
     """
+
     U = kabsch(P, Q)
 
     # Rotate P
@@ -250,361 +259,7 @@ def centroid(X):
     return C
 
 
-@jit
-def reorder_distance(p_atoms, q_atoms, p_coord, q_coord):
-    """
-    Re-orders the input atom list and xyz coordinates by atom type and then by
-    distance of each atom from the centroid.
-
-    Parameters
-    ----------
-    atoms : array
-        (N,1) matrix, where N is points holding the atoms' names
-    coord : array
-        (N,D) matrix, where N is points and D is dimension
-
-    Returns
-    -------
-    atoms_reordered : array
-        (N,1) matrix, where N is points holding the ordered atoms' names
-    coords_reordered : array
-        (N,D) matrix, where N is points and D is dimension (rows re-ordered)
-    """
-
-    # Find unique atoms
-    unique_atoms = np.unique(p_atoms)
-
-    # generate full view from q shape to fill in atom view on the fly
-    view_reorder = np.zeros(q_atoms.shape, dtype=int)
-
-    for atom in unique_atoms:
-
-        p_atom_idx, = np.where(p_atoms == atom)
-        q_atom_idx, = np.where(q_atoms == atom)
-
-        A_coord = p_coord[p_atom_idx]
-        B_coord = q_coord[q_atom_idx]
-
-        # Calculate distance from each atom to centroid
-        A_norms = np.linalg.norm(A_coord, axis=1)
-        B_norms = np.linalg.norm(B_coord, axis=1)
-
-        reorder_indices_A = np.argsort(A_norms)
-        reorder_indices_B = np.argsort(B_norms)
-
-        # Project the order of P onto Q
-        translator = np.argsort(reorder_indices_A)
-        view = reorder_indices_B[translator]
-        view_reorder[p_atom_idx] = q_atom_idx[view]
-
-    return view_reorder
-
-
-def hungarian(A, B):
-    """
-    Hungarian reordering.
-
-    Assume A and B are coordinates for atoms of SAME type only
-    """
-
-    # should be kabasch here i think
-    distances = cdist(A, B, 'euclidean')
-
-    # Perform Hungarian analysis on distance matrix between atoms of 1st
-    # structure and trial structure
-    _, indices_b = linear_sum_assignment(distances)
-
-    return indices_b
-
-
-def reorder_hungarian(p_atoms, q_atoms, p_coord, q_coord):
-    """
-    Re-orders the input atom list and xyz coordinates using the Hungarian
-    method (using optimized column results)
-
-    Parameters
-    ----------
-    p_atoms : array
-        (N,1) matrix, where N is points holding the atoms' names
-    p_atoms : array
-        (N,1) matrix, where N is points holding the atoms' names
-    p_coord : array
-        (N,D) matrix, where N is points and D is dimension
-    q_coord : array
-        (N,D) matrix, where N is points and D is dimension
-
-    Returns
-    -------
-    view_reorder : array
-             (N,1) matrix, reordered indexes of atom alignment based on the
-             coordinates of the atoms
-
-    """
-
-    # Find unique atoms
-    unique_atoms = np.unique(p_atoms)
-
-    # generate full view from q shape to fill in atom view on the fly
-    view_reorder = np.zeros(q_atoms.shape, dtype=int)
-    view_reorder -= 1
-
-    for atom in unique_atoms:
-        p_atom_idx, = np.where(p_atoms == atom)
-        q_atom_idx, = np.where(q_atoms == atom)
-
-        A_coord = p_coord[p_atom_idx]
-        B_coord = q_coord[q_atom_idx]
-
-        view = hungarian(A_coord, B_coord)
-        view_reorder[p_atom_idx] = q_atom_idx[view]
-
-    return view_reorder
-
-@jit
-def generate_permutations(elements, n):
-    """
-    Heap's algorithm for generating all n! permutations in a list
-    https://en.wikipedia.org/wiki/Heap%27s_algorithm
-
-    """
-    c = [0] * n
-    yield elements
-    i = 0
-    while i < n:
-        if c[i] < i:
-            if i % 2 == 0:
-                elements[0], elements[i] = elements[i], elements[0]
-            else:
-                elements[c[i]], elements[i] = elements[i], elements[c[i]]
-            yield elements
-            c[i] += 1
-            i = 0
-        else:
-            c[i] = 0
-            i += 1
-
-
-def brute_permutation(A, B):
-    """
-    Re-orders the input atom list and xyz coordinates using the brute force
-    method of permuting all rows of the input coordinates
-
-    Parameters
-    ----------
-    A : array
-        (N,D) matrix, where N is points and D is dimension
-    B : array
-        (N,D) matrix, where N is points and D is dimension
-
-    Returns
-    -------
-    view : array
-        (N,1) matrix, reordered view of B projected to A
-    """
-
-    rmsd_min = np.inf
-    view_min = None
-
-    # Sets initial ordering for row indices to [0, 1, 2, ..., len(A)], used in
-    # brute-force method
-
-    num_atoms = A.shape[0]
-    initial_order = list(range(num_atoms))
-
-    for reorder_indices in generate_permutations(initial_order, num_atoms):
-
-        # Re-order the atom array and coordinate matrix
-        coords_ordered = B[reorder_indices]
-
-        # Calculate the RMSD between structure 1 and the Hungarian re-ordered
-        # structure 2
-        rmsd_temp = kabsch_rmsd(A, coords_ordered)
-
-        # Replaces the atoms and coordinates with the current structure if the
-        # RMSD is lower
-        if rmsd_temp < rmsd_min:
-            rmsd_min = rmsd_temp
-            view_min = copy.deepcopy(reorder_indices)
-
-    return view_min
-
-
-def reorder_brute(p_atoms, q_atoms, p_coord, q_coord):
-    """
-    Re-orders the input atom list and xyz coordinates using all permutation of
-    rows (using optimized column results)
-
-    Parameters
-    ----------
-    p_atoms : array
-        (N,1) matrix, where N is points holding the atoms' names
-    q_atoms : array
-        (N,1) matrix, where N is points holding the atoms' names
-    p_coord : array
-        (N,D) matrix, where N is points and D is dimension
-    q_coord : array
-        (N,D) matrix, where N is points and D is dimension
-
-    Returns
-    -------
-    view_reorder : array
-        (N,1) matrix, reordered indexes of atom alignment based on the
-        coordinates of the atoms
-
-    """
-
-    # Find unique atoms
-    unique_atoms = np.unique(p_atoms)
-
-    # generate full view from q shape to fill in atom view on the fly
-    view_reorder = np.zeros(q_atoms.shape, dtype=int)
-    view_reorder -= 1
-
-    for atom in unique_atoms:
-        p_atom_idx, = np.where(p_atoms == atom)
-        q_atom_idx, = np.where(q_atoms == atom)
-
-        A_coord = p_coord[p_atom_idx]
-        B_coord = q_coord[q_atom_idx]
-
-        view = brute_permutation(A_coord, B_coord)
-        view_reorder[p_atom_idx] = q_atom_idx[view]
-
-    return view_reorder
-
-
-def check_reflections(p_atoms,
-                      q_atoms,
-                      p_coord,
-                      q_coord,
-                      reorder_method=reorder_hungarian,
-                      rotation_method=kabsch_rmsd,
-                      keep_stereo=False):
-    """
-    Minimize RMSD using reflection planes for molecule P and Q
-
-    Warning: This will affect stereo-chemistry
-
-    Parameters
-    ----------
-    p_atoms : array
-        (N,1) matrix, where N is points holding the atoms' names
-    q_atoms : array
-        (N,1) matrix, where N is points holding the atoms' names
-    p_coord : array
-        (N,D) matrix, where N is points and D is dimension
-    q_coord : array
-        (N,D) matrix, where N is points and D is dimension
-
-    Returns
-    -------
-    min_rmsd
-    min_swap
-    min_reflection
-    min_review
-
-    """
-
-    min_rmsd = np.inf
-    min_swap = None
-    min_reflection = None
-    min_review = None
-    tmp_review = None
-    swap_mask = [1, -1, -1, 1, -1, 1]
-    reflection_mask = [1, -1, -1, -1, 1, 1, 1, -1]
-
-    for swap, i in zip(AXIS_SWAPS, swap_mask):
-        for reflection, j in zip(AXIS_REFLECTIONS, reflection_mask):
-            if keep_stereo and i * j == -1: continue  # skip enantiomers
-
-            tmp_atoms = copy.copy(q_atoms)
-            tmp_coord = copy.deepcopy(q_coord)
-            tmp_coord = tmp_coord[:, swap]
-            tmp_coord = np.dot(tmp_coord, np.diag(reflection))
-            tmp_coord -= centroid(tmp_coord)
-
-            # Reorder
-            if reorder_method is not None:
-                tmp_review = reorder_method(p_atoms, tmp_atoms, p_coord,
-                                            tmp_coord)
-                tmp_coord = tmp_coord[tmp_review]
-                tmp_atoms = tmp_atoms[tmp_review]
-
-            # Rotation
-            if rotation_method is None:
-                this_rmsd = rmsd(p_coord, tmp_coord)
-            else:
-                this_rmsd = rotation_method(p_coord, tmp_coord)
-
-            if this_rmsd < min_rmsd:
-                min_rmsd = this_rmsd
-                min_swap = swap
-                min_reflection = reflection
-                min_review = tmp_review
-
-    if not (p_atoms == q_atoms[min_review]).all():
-        print("error: Not aligned")
-        quit()
-
-    return min_rmsd, min_swap, min_reflection, min_review
-
-
-def set_coordinates(atoms, V, title="", decimals=8):
-    """
-    Print coordinates V with corresponding atoms to stdout in XYZ format.
-    Parameters
-    ----------
-    atoms : list
-        List of atomic types
-    V : array
-        (N,3) matrix of atomic coordinates
-    title : string (optional)
-        Title of molecule
-    decimals : int (optional)
-        number of decimals for the coordinates
-
-    Return
-    ------
-    output : str
-        Molecule in XYZ format
-
-    """
-    N, D = V.shape
-
-    fmt = "{:2s}" + (" {:15." + str(decimals) + "f}") * 3
-
-    out = list()
-    out += [str(N)]
-    out += [title]
-
-    for i in range(N):
-        atom = atoms[i]
-        atom = atom[0].upper() + atom[1:]
-        out += [fmt.format(atom, V[i, 0], V[i, 1], V[i, 2])]
-
-    return "\n".join(out)
-
-
-def print_coordinates(atoms, V, title=""):
-    """
-    Print coordinates V with corresponding atoms to stdout in XYZ format.
-
-    Parameters
-    ----------
-    atoms : list
-        List of element types
-    V : array
-        (N,3) matrix of atomic coordinates
-    title : string (optional)
-        Title of molecule
-
-    """
-
-    print(set_coordinates(atoms, V, title=title))
-
-    return
-
-def parse_periodic_case(file_1, file_2, try_supercell=True):
+def parse_periodic_case(file_1, file_2, try_supercell: bool=True, pymatgen:bool=False, get_reduced_structure:bool=True):
     """
     Parser for periodic structures, handles two possible cases:
         (1) Structures are supercells (within tolerance), then one cell is multiplied by the scaling factors
@@ -612,19 +267,27 @@ def parse_periodic_case(file_1, file_2, try_supercell=True):
         to make sure we have meaningful comparisons.
 
     Args:
-        file_1 (str): path to first file, in on format that ASE can parse
-        file_2 (str): path to second file
+        file_1 (str/pymatgen structure object): path to first file, in on format that ASE can parse, pymatgen structure
+            object in case pymatgen=True
+        file_2 (str/pymatgen structure object): path to second file, pymatgen structure object in case pymatgen=True
         try_supercell (bool): if true, we attempt to build a supercell, default: True
-
+        pymatgen (bool): if true, then file_1 and file_2 take pymatgen structure objects
+        get_reduced_structure (bool): if true (default) it gets the niggli reduced cell.
     Returns:
         atomic symbols (list), cartesian positions (list) of structure 1,
         atomic symbols (list), cartesian positions (list) of structure 2
     """
 
-    atoms1 = read(file_1)
-    atoms2 = read(file_2)
-    niggli_reduce(atoms1)
-    niggli_reduce(atoms2)
+    if pymatgen:
+        atoms1 = AseAtomsAdaptor.get_atoms(file_1)
+        atoms2 = AseAtomsAdaptor.get_atoms(file_2)
+    else:
+        atoms1 = read(file_1)
+        atoms2 = read(file_2)
+
+    if get_reduced_structure:
+        niggli_reduce(atoms1)
+        niggli_reduce(atoms2)
 
     if try_supercell:
         a1, a2 = attempt_supercell(atoms1, atoms2)
@@ -675,6 +338,7 @@ def attempt_supercell(atoms1, atoms2):
             atoms1 = atoms1 * x
 
     return atoms1, atoms2
+
 
 def rescale_periodic_system(atoms1, atoms2):
     """

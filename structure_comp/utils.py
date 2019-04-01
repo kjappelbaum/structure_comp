@@ -133,3 +133,6 @@ def get_cheap_hash(structure: Structure, get_niggli=True):
     comp_hash = str(hash(str(crystal.symbol_set)))
     density_hash = str(hash(crystal.density))
     return comp_hash + density_hash
+
+def attempt_supercell_pymatgen():
+    raise NotImplementedError

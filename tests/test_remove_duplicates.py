@@ -27,6 +27,9 @@ def test_structure_folder():
     rd_object_3 = RemoveDuplicates(structure_list, cached=True, method='rmsd')
     rd_object_4 = RemoveDuplicates(structure_list, cached=False, method='rmsd')
 
+    rd_object_5 = RemoveDuplicates(structure_list, cached=True, method='rmsd_graph')
+    rd_object_6 = RemoveDuplicates(structure_list, cached=False, method='rmsd_graph')
+
     rd_object_1.run_filtering()
     assert rd_object_1.number_of_duplicates == 0
     rd_object_2.run_filtering()
@@ -36,6 +39,11 @@ def test_structure_folder():
     assert rd_object_3.number_of_duplicates == 0
     rd_object_4.run_filtering()
     assert rd_object_4.number_of_duplicates == 0
+
+    rd_object_5.run_filtering()
+    assert rd_object_5.number_of_duplicates == 0
+    rd_object_6.run_filtering()
+    assert rd_object_6.number_of_duplicates == 0
 
     assert not (rd_object_1.number_of_duplicates >
                 rd_object_2.number_of_duplicates)
@@ -104,21 +112,18 @@ def test_structure_folder_3():
 # Check supercell handling
 #@pytest.mark.skip(
 #    reason="the graph construction for a huge unitcell is too slow")
-
 def test_supercells():
     structure_list = get_structure_list(
         os.path.join(THIS_DIR, 'structures_supercells'))
 
-#    rd_object_1 = RemoveDuplicates(
-#        structure_list, cached=True, method='rmsd')
+    #rd_object_1 = RemoveDuplicates(
+    #    structure_list, cached=True, method='rmsd')
     rd_object_2 = RemoveDuplicates(
         structure_list, cached=False, method='rmsd')
 
-#    rd_object_1.run_filtering()
-#    assert rd_object_1.number_of_duplicates == 1
+    #rd_object_1.run_filtering()
+    #assert rd_object_1.number_of_duplicates == 1
     rd_object_2.run_filtering()
     assert rd_object_2.number_of_duplicates == 1
-#    assert not (rd_object_1.number_of_duplicates >
-#                rd_object_2.number_of_duplicates)
-#    assert not (rd_object_1.number_of_duplicates <
-#                rd_object_2.number_of_duplicates)
+
+

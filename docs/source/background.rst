@@ -28,7 +28,8 @@ The approach in the main duplicate removal routines is the following:
    structures that probably have the same composition.
 3. after we identified the structures with identical composition (which are usually not too many)
    we can run a more expensive structural comparisons using structure graphs or the Kabsch algorithm
-
+   As the Kabsch algorithm is relatively inexpensive (but it needs a threshold) we also have an option,
+   where one can use the Kabsch algorithm and then do a comparison based on the structure graphs.
 
 Kabsch algorithm
 .................

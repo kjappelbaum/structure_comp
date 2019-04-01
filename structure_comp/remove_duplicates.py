@@ -16,11 +16,13 @@ from pymatgen import Structure
 import concurrent.futures
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
+from pymatgen.io.ase import AseAtomsAdaptor
 from scipy.spatial.distance import pdist, squareform
 import tempfile
 import logging
 from ase.visualize.plot import plot_atoms
-from ase.io import read
+from ase.io import read, write
+from ase.build import niggli_reduce
 import matplotlib.pyplot as plt
 from tqdm.autonotebook import tqdm
 import pandas as pd
@@ -31,7 +33,7 @@ from collections import defaultdict
 logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
 
-
+# ToDo: add XTalComp support
 class RemoveDuplicates():
     """
     A RemoveDuplicates object operates on a collection of structure and allows
@@ -48,7 +50,7 @@ class RemoveDuplicates():
                  try_supercell=True):
 
         self.structure_list = structure_list
-        self.reduced_structure_dict = {}
+        self.reduced_structure_dict = None
         self.cached = cached
         self.pairs = None
         self.method = method
@@ -63,7 +65,8 @@ class RemoveDuplicates():
                     folder,
                     cached: bool = False,
                     extension='cif',
-                    method='standard'):
+                    method='standard',
+                    try_supercell=True):
         """
 
         Args:
@@ -77,7 +80,7 @@ class RemoveDuplicates():
 
         """
         sl = get_structure_list(folder, extension)
-        return cls(sl, cached, method)
+        return cls(sl, cached, method, try_supercell)
 
     # Implement some logic in case someone wants to compare dbs
     def __len__(self):
@@ -107,12 +110,20 @@ class RemoveDuplicates():
     def get_reduced_structure(self, structure):
         sname = Path(structure).name
         stem = Path(structure).stem
-        crystal = Structure.from_file(structure)
-        crystal = crystal.get_reduced_structure()
-        if not self.cached:
-            crystal.to(filename=os.path.join(self.tempdirpath, sname))
+        if self.cached:
+            self.reduced_structure_dict = {}
+        try:
+            # Cif reader in ASE seems more stable to me, especially for CSD data
+            atoms = read(structure)
+        except Exception:
+            logger.error('Could not read structure %s', stem)
         else:
-            self.reduced_structure_dict[stem] = crystal
+            niggli_reduce(atoms)
+            if not self.cached:
+                write(os.path.join(self.tempdirpath, sname), atoms)
+            else:
+                crystal = AseAtomsAdaptor.get_structure(atoms)
+                self.reduced_structure_dict[stem] = crystal
         return stem
 
     def get_reduced_structures(self):
@@ -221,7 +232,7 @@ class RemoveDuplicates():
 
     @staticmethod
     def get_scalar_distance_matrix(scalar_feature_df: pd.DataFrame,
-                                   threshold: float = 0.5) -> list:
+                                   threshold: float = 0.05) -> list:
         """
         Get structures that probably have the same composition.
 
@@ -245,8 +256,9 @@ class RemoveDuplicates():
     @staticmethod
     def compare_rmsd(tupellist: list,
                      scalar_feature_df: pd.DataFrame,
-                     threshold: float = 0.2,
-                     try_supercell: bool = True) -> list:
+                     threshold: float = 0.05,
+                     try_supercell: bool = True,
+                     reduced_structure_dict=None) -> list:
         """
 
         Args:
@@ -261,16 +273,35 @@ class RemoveDuplicates():
         logger.info('doing RMSD comparison')
         pairs = []
         for items in tqdm(tupellist):
-            if items[0] != items[1]:
-                _, P, _, Q = parse_periodic_case(
-                    scalar_feature_df.iloc[items[0]]['name'],
-                    scalar_feature_df.iloc[items[1]]['name'], try_supercell)
-                logger.debug('P is %s, Q is %s', P, Q)
-                logger.debug('Lengths are %s, %s', len(P), len(Q))
-                rmsd_result = kabsch_rmsd(P, Q)
-                logger.debug('The Kabsch RMSD is %s', rmsd_result)
-                if rmsd_result < threshold:
-                    pairs.append(items)
+            if reduced_structure_dict is not None:
+                if items[0] != items[1]:
+                    crystal_a = reduced_structure_dict[scalar_feature_df.iloc[
+                        items[0]]['name']]
+                    crystal_b = reduced_structure_dict[scalar_feature_df.iloc[
+                        items[1]]['name']]
+
+                    _, P, _, Q = parse_periodic_case(
+                        crystal_a, crystal_b, try_supercell, pymatgen=True, get_reduced_structure=False)
+
+                    logger.debug('Lengths are %s, %s', len(P), len(Q))
+                    rmsd_result = kabsch_rmsd(P, Q, translate=True)
+                    logger.debug('The Kabsch RMSD is %s', rmsd_result)
+                    if rmsd_result < threshold:
+                        pairs.append(items)
+            else:
+                if items[0] != items[1]:
+                    _, P, _, Q = parse_periodic_case(
+                        scalar_feature_df.iloc[items[0]]['name'],
+                        scalar_feature_df.iloc[items[1]]['name'],
+                        try_supercell, get_reduced_structure=False)
+                    logger.debug('Comparing %s and %s',
+                                 scalar_feature_df.iloc[items[0]]['name'],
+                                 scalar_feature_df.iloc[items[1]]['name'])
+                    logger.debug('Lengths are %s, %s', len(P), len(Q))
+                    rmsd_result = kabsch_rmsd(P, Q, translate=True)
+                    logger.debug('The Kabsch RMSD is %s', rmsd_result)
+                    if rmsd_result < threshold:
+                        pairs.append(items)
         return pairs
 
     def compare_graph_pair(self, items):
@@ -401,8 +432,19 @@ class RemoveDuplicates():
 
         elif self.method == 'rmsd':
             self.pairs = RemoveDuplicates.compare_rmsd(
-                self.similar_composition_tuples, self.scalar_feature_matrix,
-                self.try_supercell)
+                tupellist=self.similar_composition_tuples,
+                scalar_feature_df=self.scalar_feature_matrix,
+                try_supercell=self.try_supercell,
+                reduced_structure_dict=self.reduced_structure_dict)
+
+        elif self.method == 'rmsd_graph':
+            self.rmsd_pairs = RemoveDuplicates.compare_rmsd(
+                tupellist=self.similar_composition_tuples,
+                scalar_feature_df=self.scalar_feature_matrix,
+                try_supercell=self.try_supercell,
+                reduced_structure_dict=self.reduced_structure_dict)
+
+            self.pairs = self.compare_graphs(self.rmsd_pairs)
 
         elif self.method == 'hash':
             RemoveDuplicates.get_graph_hash_dict(self.structure_list)

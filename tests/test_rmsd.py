@@ -10,6 +10,9 @@ __status__ = 'First Draft, Testing'
 
 import pytest
 from structure_comp.rmsd import attempt_supercell, parse_periodic_case, rmsd, kabsch_rmsd
+from pymatgen import Structure
+from pathlib import Path
+import tempfile
 from ase.io import read
 from ase.build import niggli_reduce
 import os
@@ -36,8 +39,19 @@ def test_attempt_supercell(get_supercell_paths):
                          0.001) == a_2.get_cell_lengths_and_angles()
 
 
-def test_rmsd(get_supercell_paths):
+def test_kabsch_rmsd(get_supercell_paths):
     _, P, _, Q = parse_periodic_case(get_supercell_paths[0],
                                      get_supercell_paths[1])
     result = kabsch_rmsd(P, Q)
     assert pytest.approx(result, abs=0.01) == 0.0
+
+    result = kabsch_rmsd(P, Q, translate=True)
+    assert pytest.approx(result, abs=0.01) == 0.0
+
+
+def test_rmsd(get_supercell_paths):
+    _, P, _, Q = parse_periodic_case(get_supercell_paths[0],
+                                     get_supercell_paths[1])
+    result = rmsd(P, Q)
+    assert pytest.approx(result, abs=0.01) == 0.0
+
