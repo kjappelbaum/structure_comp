@@ -134,5 +134,26 @@ def get_cheap_hash(structure: Structure, get_niggli=True):
     density_hash = str(hash(crystal.density))
     return comp_hash + density_hash
 
-def attempt_supercell_pymatgen():
-    raise NotImplementedError
+def attempt_supercell_pymatgen(structure_1: Structure, structure_2: Structure) -> Structure:
+    lattice1 = np.array(structure_1.lattice.abc)
+    lattice2 = np.array(structure_2.lattice.abc)
+
+    one_larger_than_two = False
+
+    if structure_1.volume > structure_2.volume:
+        factors = lattice1 / lattice2
+        one_larger_than_two = True
+    else:
+        factors = lattice2 / lattice1
+
+    x = np.array(factors)
+    x_int = x.astype(int)
+    if np.all(np.isclose(x, x_int, 0.001)):
+        x = x_int
+        logger.debug('found supercell with scaling factors %s', x)
+        if one_larger_than_two:
+            structure_2 = structure_2 * x
+        else:
+            structure_1 = structure_1 * x
+
+    return structure_1, structure_2

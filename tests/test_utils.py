@@ -13,7 +13,7 @@ import numpy as np
 import os
 from pymatgen import Structure
 from glob import glob
-from structure_comp.utils import get_hash, get_rmsd, kl_divergence, tanimoto_distance, get_cheap_hash
+from structure_comp.utils import get_hash, get_rmsd, kl_divergence, tanimoto_distance, get_cheap_hash, attempt_supercell_pymatgen
 from scipy import stats
 
 THIS_DIR = os.path.dirname(__file__)
@@ -116,3 +116,9 @@ def test_tanimoto_distance(get_distributions):
                 assert pytest.approx(tanimototo, 0.0001) == 1
             else:
                 assert tanimototo < 1
+
+def test_attempt_supercell_pymatgen():
+    structure_1 = Structure.from_file(os.path.join(THIS_DIR, 'structures_supercells', 'UIO-66.cif'))
+    structure_2 = Structure.from_file(os.path.join(THIS_DIR, 'structures_supercells', 'UIO-66_2_2_2.cif'))
+    s1, s2 = attempt_supercell_pymatgen(structure_1, structure_2)
+    assert pytest.approx(s1.lattice.abc, abs=0.01) == s2.lattice.abc
