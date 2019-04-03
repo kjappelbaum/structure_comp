@@ -35,6 +35,8 @@ logger.setLevel(logging.DEBUG)
 
 
 # ToDo: add XTalComp support
+# ToDo: more useful error message when file cannot be read
+
 class RemoveDuplicates():
     """
     A RemoveDuplicates object operates on a collection of structure and allows

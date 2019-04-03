@@ -21,6 +21,12 @@ def get_ten_identical_files():
     return [os.path.join(THIS_DIR, 'structures', 'Cu-BTC.cif')] * 10
 
 
+@pytest.fixture(scope='module')
+def get_ten_identical_files_and_one_file():
+    return [os.path.join(THIS_DIR, 'structures', 'Cu-BTC.cif')
+            ] * 10 + os.path.join(THIS_DIR, 'structures', 'Cu-BTC.cif')
+
+
 def test_randomized_rmsd(get_ten_identical_files):
     ds = DistStatistic(get_ten_identical_files)
     rmsds = ds.randomized_rmsd(iterations=100)
@@ -47,3 +53,5 @@ def test_randomized_graphs(get_ten_identical_files):
     ds = DistStatistic(get_ten_identical_files)
     jaccards = ds.randomized_graphs(iterations=3)
     assert pytest.approx(sum(jaccards), 0.001) == 0.0
+
+

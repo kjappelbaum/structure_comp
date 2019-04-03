@@ -20,12 +20,47 @@ logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
 
 
-class DistStatistic():
+class Statistics():
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def _randomized_graphs(structure_list_a: list,
+                           structure_list_b: list,
+                           iterations: int = 5000) -> list:
+        """
+        Randomly sample structures from the structure list and compare their Jaccard graph distance.
+
+        Args:
+            structure_list_a (list): list of paths to strucutres
+            structure_list_b (list): list of paths to structures
+            iterations (int): Number of comparisons (sampling works with replacement, i.e. the same pair might
+            be sampled several times).
+
+        Returns:
+            list of length iterations of the Jaccard distances
+        """
+        diffs = []
+        for _ in tqdm(range(iterations)):
+            random_selection_1 = random.sample(structure_list_a, 1)[0]
+            random_selection_2 = random.sample(structure_list_b, 1)[0]
+            crystal_a = Structure.from_file(random_selection_1)
+            crystal_b = Structure.from_file(random_selection_2)
+            nn_strategy = JmolNN()
+            sgraph_a = StructureGraph.with_local_env_strategy(
+                crystal_a, nn_strategy)
+            sgraph_b = StructureGraph.with_local_env_strategy(
+                crystal_b, nn_strategy)
+            diffs.append(sgraph_a.diff(sgraph_b, strict=False)['dist'])
+        return diffs
+
+
+class DistStatistic(Statistics):
     def __init__(self, structure_list):
         self.structure_list = structure_list
 
     @classmethod
-    def from_folder(class_object, folder: str, extension: str = '.cif'):
+    def from_folder(cls, folder: str, extension: str = '.cif'):
         """
 
         Args:
@@ -36,31 +71,12 @@ class DistStatistic():
 
         """
         sl = get_structure_list(folder, extension)
-        return class_object(sl)
+        return cls(sl)
 
     def randomized_graphs(self, iterations: int = 5000) -> list:
-        """
-        Randomly sample structures from the structure list and compare their Jaccard graph distance.
-        
-        Args:
-            iterations (int): Number of comparisons (sampling works with replacement, i.e. the same pair might
-            be sampled several times).
-
-        Returns:
-            list of length iterations of the Jaccard distances 
-        """
-        diffs = []
-        for _ in tqdm(range(iterations)):
-            random_selection = random.sample(self.structure_list, 2)
-            crystal_a = Structure.from_file(random_selection[0])
-            crystal_b = Structure.from_file(random_selection[1])
-            nn_strategy = JmolNN()
-            sgraph_a = StructureGraph.with_local_env_strategy(
-                crystal_a, nn_strategy)
-            sgraph_b = StructureGraph.with_local_env_strategy(
-                crystal_b, nn_strategy)
-            diffs.append(sgraph_a.diff(sgraph_b, strict=False)['dist'])
-        return diffs
+        jaccards = self._randomized_graphs(
+            self.structure_list, self.structure_list, iterations)
+        return jaccards
 
     def randomized_structure_property(self,
                                       property: str = 'density',
@@ -112,10 +128,10 @@ class DistComparison():
         self.structure_list_2 = structure_list_2
 
     @classmethod
-    def from_folders(class_object, folder_1, folder_2, extension='.cif'):
+    def from_folders(cls, folder_1, folder_2, extension='.cif'):
         sl_1 = get_structure_list(folder_1, extension)
         sl_2 = get_structure_list(folder_2, extension)
-        return class_object(sl_1, sl_2)
+        return cls(sl_1, sl_2)
 
 
 class DistExampleComparison():
@@ -129,7 +145,8 @@ class DistExampleComparison():
         return class_object(sl, file)
 
     @staticmethod
-    def property_based_distances_histogram(property_list: list) -> pd.DataFrame:
+    def property_based_distances_histogram(
+            property_list: list) -> pd.DataFrame:
         ...
 
     def property_based_distances_clustered(
