@@ -56,7 +56,7 @@ def get_number_bins(array):
     Returns:
         number of bins
     """
-    h = 2 * stats.iqr(array) * len(array)**(- 1.0 / 3.0)
+    h = 2 * stats.iqr(array) * len(array)**(-1.0 / 3.0)
     return int((max(array) - min(array)) / h)
 
 
@@ -65,7 +65,7 @@ def kl_divergence(array_1, array_2, bins=None):
     KL divergence could be used a measure of covariate shift.
     """
 
-    minimum =min([min(array_1), min(array_2)])
+    minimum = min([min(array_1), min(array_2)])
     maximum = max([max(array_1), max(array_2)])
 
     if bins is None:
@@ -134,7 +134,9 @@ def get_cheap_hash(structure: Structure, get_niggli=True):
     density_hash = str(hash(crystal.density))
     return comp_hash + density_hash
 
-def attempt_supercell_pymatgen(structure_1: Structure, structure_2: Structure) -> Structure:
+
+def attempt_supercell_pymatgen(structure_1: Structure,
+                               structure_2: Structure) -> Structure:
     lattice1 = np.array(structure_1.lattice.abc)
     lattice2 = np.array(structure_2.lattice.abc)
 

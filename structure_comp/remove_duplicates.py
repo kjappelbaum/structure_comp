@@ -27,11 +27,12 @@ import matplotlib.pyplot as plt
 from tqdm.autonotebook import tqdm
 import pandas as pd
 from .rmsd import parse_periodic_case, kabsch_rmsd
-from .utils import get_structure_list, get_hash
+from .utils import get_structure_list, get_hash, attempt_supercell_pymatgen
 from collections import defaultdict
 
 logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
+
 
 # ToDo: add XTalComp support
 class RemoveDuplicates():
@@ -281,7 +282,11 @@ class RemoveDuplicates():
                         items[1]]['name']]
 
                     _, P, _, Q = parse_periodic_case(
-                        crystal_a, crystal_b, try_supercell, pymatgen=True, get_reduced_structure=False)
+                        crystal_a,
+                        crystal_b,
+                        try_supercell,
+                        pymatgen=True,
+                        get_reduced_structure=False)
 
                     logger.debug('Lengths are %s, %s', len(P), len(Q))
                     rmsd_result = kabsch_rmsd(P, Q, translate=True)
@@ -293,7 +298,8 @@ class RemoveDuplicates():
                     _, P, _, Q = parse_periodic_case(
                         scalar_feature_df.iloc[items[0]]['name'],
                         scalar_feature_df.iloc[items[1]]['name'],
-                        try_supercell, get_reduced_structure=False)
+                        try_supercell,
+                        get_reduced_structure=False)
                     logger.debug('Comparing %s and %s',
                                  scalar_feature_df.iloc[items[0]]['name'],
                                  scalar_feature_df.iloc[items[1]]['name'])
@@ -310,6 +316,9 @@ class RemoveDuplicates():
             self.scalar_feature_matrix.iloc[items[0]]['name'])
         crystal_b = Structure.from_file(
             self.scalar_feature_matrix.iloc[items[1]]['name'])
+        if self.try_supercell:
+            crystal_a, crystal_b = attempt_supercell_pymatgen(
+                crystal_a, crystal_b)
         sgraph_a = StructureGraph.with_local_env_strategy(
             crystal_a, nn_strategy)
         sgraph_b = StructureGraph.with_local_env_strategy(
@@ -328,6 +337,9 @@ class RemoveDuplicates():
                                                 iloc[items[0]]['name']]
         crystal_b = self.reduced_structure_dict[self.scalar_feature_matrix.
                                                 iloc[items[1]]['name']]
+        if self.try_supercell:
+            crystal_a, crystal_b = attempt_supercell_pymatgen(
+                crystal_a, crystal_b)
         sgraph_a = StructureGraph.with_local_env_strategy(
             crystal_a, nn_strategy)
         sgraph_b = StructureGraph.with_local_env_strategy(
