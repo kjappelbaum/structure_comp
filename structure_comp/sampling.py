@@ -147,3 +147,5 @@ class Sampler():
                     plot_atoms(
                         read(os.path.join(path, '.'.join([item, extension]))),
                         axarr)
+
+

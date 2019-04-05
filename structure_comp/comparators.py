@@ -32,7 +32,7 @@ class Statistics():
         Randomly sample structures from the structure list and compare their Jaccard graph distance.
 
         Args:
-            structure_list_a (list): list of paths to strucutres
+            structure_list_a (list): list of paths to structures
             structure_list_b (list): list of paths to structures
             iterations (int): Number of comparisons (sampling works with replacement, i.e. the same pair might
             be sampled several times).
@@ -54,6 +54,63 @@ class Statistics():
             diffs.append(sgraph_a.diff(sgraph_b, strict=False)['dist'])
         return diffs
 
+    @staticmethod
+    def _randomized_structure_property(structure_list_a: list,
+                                       structure_list_b: list,
+                                       property: str = 'density',
+                                       iterations: int = 5000) -> list:
+        """
+
+        Args:
+            structure_list_a (list): list of paths to structures
+            structure_list_b (list): list of paths to structures
+            property (str): property that is used for the structure comparisons, available options are
+                density, num_sites, volume. Default is density.
+            iterations (int): number of comparisons (sampling works with replacement, i.e. the same pair might
+            be sampled several times).
+
+        Returns:
+
+        """
+        diffs = []
+        for _ in tqdm(range(iterations)):
+            random_selection_1 = random.sample(structure_list_a, 1)[0]
+            random_selection_2 = random.sample(structure_list_b, 1)[0]
+            crystal_a = Structure.from_file(random_selection_1)
+            crystal_b = Structure.from_file(random_selection_2)
+            if property == 'density':
+                diff = np.abs(crystal_a.density - crystal_b.density)
+            elif property == 'num_sites':
+                diff = np.abs(crystal_a.num_sites - crystal_b.num_sites)
+            elif property == 'volume':
+                diff = np.abs(crystal_a.volume - crystal_b.volume)
+            diffs.append(diff)
+        return diffs
+
+    @staticmethod
+    def _randomized_rmsd(structure_list_a: list,
+                         structure_list_b: list,
+                         iterations: float = 5000) -> list:
+        """
+
+        Args:
+            structure_list_a (list): list of paths to structures
+            structure_list_b (list): list of paths to structures
+            iterations (int): number of comparisons (sampling works with replacement, i.e. the same pair might
+                  be sampled several times).
+
+        Returns:
+
+        """
+        rmsds = []
+        for _ in tqdm(range(iterations)):
+            random_selection_1 = random.sample(structure_list_a, 1)[0]
+            random_selection_2 = random.sample(structure_list_b, 1)[0]
+            a = get_rmsd(random_selection_1, random_selection_2)
+            rmsds.append(a)
+
+        return rmsds
+
 
 class DistStatistic(Statistics):
     def __init__(self, structure_list):
@@ -74,46 +131,49 @@ class DistStatistic(Statistics):
         return cls(sl)
 
     def randomized_graphs(self, iterations: int = 5000) -> list:
-        jaccards = self._randomized_graphs(
-            self.structure_list, self.structure_list, iterations)
+        """
+        Returns iterations times the Jaccard distance between structure graph of two randomly chosen structures
+
+        Args:
+            iterations (int): number of comparisons (sampling works with replacement, i.e. the same pair might
+                  be sampled several times).
+
+        Returns:
+            list of jaccard distances
+        """
+        jaccards = self._randomized_graphs(self.structure_list,
+                                           self.structure_list, iterations)
         return jaccards
 
-    def randomized_structure_property(self,
-                                      property: str = 'density',
-                                      iterations: int = 5000) -> list:
+    def randomized_structure_property(self, property: str = 'density', iterations: int = 5000) -> list:
         """
-
+        Returns iterations times the Euclidean distance between two randomly chosen structures
         Args:
             property (str): property that is used for the structure comparisons, available options are
                 density, num_sites, volume. Default is density.
             iterations (int): number of comparisons (sampling works with replacement, i.e. the same pair might
-            be sampled several times).
+                  be sampled several times).
 
         Returns:
-
+            list of property distances
         """
-        diffs = []
-        for _ in tqdm(range(iterations)):
-            random_selection = random.sample(self.structure_list, 2)
-            crystal_a = Structure.from_file(random_selection[0])
-            crystal_b = Structure.from_file(random_selection[1])
-            if property == 'density':
-                diff = np.abs(crystal_a.density - crystal_b.density)
-            elif property == 'num_sites':
-                diff = np.abs(crystal_a.num_sites - crystal_b.num_sites)
-            elif property == 'volume':
-                diff = np.abs(crystal_a.volume - crystal_b.volume)
-            diffs.append(diff)
-        return diffs
+        distances = self._randomized_structure_property(
+            self.structure_list, self.structure_list, property, iterations)
+        return distances
 
-    def randomized_rmsd(self, iterations: float = 5000) -> list:
-        rmsds = []
-        for _ in tqdm(range(iterations)):
-            random_selection = random.sample(self.structure_list, 2)
-            a = get_rmsd(random_selection[0], random_selection[1])
-            rmsds.append(a)
+    def randomized_rmsd(self, iterations: int = 5000) -> list:
+        """
+        Returns iterations times the Kabsch RMSD between two randomly chosen structures
+        Args:
+            iterations (int): number of comparisons (sampling works with replacement, i.e. the same pair might
+                  be sampled several times).
 
-        return rmsds
+        Returns:
+            list of Kabsch RMSDs
+        """
+        distances = self._randomized_rmsd(
+            self.structure_list, self.structure_list, iterations)
+        return distances
 
 
 class DistComparison():
@@ -132,6 +192,52 @@ class DistComparison():
         sl_1 = get_structure_list(folder_1, extension)
         sl_2 = get_structure_list(folder_2, extension)
         return cls(sl_1, sl_2)
+
+    def randomized_graphs(self, iterations: int = 5000) -> list:
+        """
+        Returns iterations times the Jaccard distance between structure graph of two randomly chosen structures
+
+        Args:
+            iterations (int): number of comparisons (sampling works with replacement, i.e. the same pair might
+                  be sampled several times).
+
+        Returns:
+            list of jaccard distances
+        """
+        jaccards = self._randomized_graphs(self.structure_list_1,
+                                           self.structure_list_2, iterations)
+        return jaccards
+
+    def randomized_structure_property(self, property: str = 'density', iterations: int = 5000) -> list:
+        """
+        Returns iterations times the Euclidean distance between two randomly chosen structures
+        Args:
+            property (str): property that is used for the structure comparisons, available options are
+                density, num_sites, volume. Default is density.
+            iterations (int): number of comparisons (sampling works with replacement, i.e. the same pair might
+                  be sampled several times).
+
+        Returns:
+            list of property distances
+        """
+        distances = self._randomized_structure_property(
+            self.structure_list_1, self.structure_list_2, property, iterations)
+        return distances
+
+    def randomized_rmsd(self, iterations: int = 5000) -> list:
+        """
+        Returns iterations times the Kabsch RMSD between two randomly chosen structures
+        Args:
+            iterations (int): number of comparisons (sampling works with replacement, i.e. the same pair might
+                  be sampled several times).
+
+        Returns:
+            list of Kabsch RMSDs
+        """
+        distances = self._randomized_rmsd(
+            self.structure_list_1, self.structure_list_2, iterations)
+        return distances
+
 
 
 class DistExampleComparison():

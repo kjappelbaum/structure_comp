@@ -10,6 +10,8 @@ __status__ = 'First Draft, Testing'
 
 from glob import glob
 import os
+import re
+import unicodedata
 import functools
 from .rmsd import parse_periodic_case, rmsd
 from pymatgen import Structure
@@ -23,9 +25,13 @@ logger = logging.getLogger()
 
 def get_structure_list(directory: str, extension: str = 'cif') -> list:
     """
-    :param directory: path to directory
-    :param extension: fileextension
-    :return:
+
+    Args:
+        directory:
+        extension:
+
+    Returns:
+
     """
     logger.info('getting structure list')
     if extension:
@@ -159,3 +165,20 @@ def attempt_supercell_pymatgen(structure_1: Structure,
             structure_1 = structure_1 * x
 
     return structure_1, structure_2
+
+
+def slugify(value, allow_unicode=False):
+    """
+    Normalizes string, converts to lowercase, removes non-alpha characters,
+    and converts spaces to hyphens.
+
+    source: https://github.com/django/django/blob/master/django/utils/text.py
+    """
+    value = str(value)
+    if allow_unicode:
+        value = unicodedata.normalize('NFKC', value)
+    else:
+        value = unicodedata.normalize('NFKD', value).encode(
+            'ascii', 'ignore').decode('ascii')
+    value = re.sub(r'[^\w\s-]', '', value).strip().lower()
+    return re.sub(r'[-\s]+', '-', value)
