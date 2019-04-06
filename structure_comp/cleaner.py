@@ -19,7 +19,8 @@ import numpy as np
 from scipy.spatial.distance import squareform
 from scipy.cluster.hierarchy import fcluster, linkage
 import os
-from .utils import slugify, closest_index
+from .utils import slugify, incremental_farthest_search, get_symbol_indices
+from sklearn.cluster import DBSCAN
 
 
 class Cleaner():
@@ -29,13 +30,14 @@ class Cleaner():
         pass
 
     @staticmethod
-    def rewrite_cif(path: str, outdir: str) -> str:
+    def rewrite_cif(path: str, outdir: str, remove_disorder: bool = True) -> str:
         """
         Reads cif file and keeps only the relevant parts defined in RELEVANT_KEYS.
         Sometimes, it is good to loose information ...
         Args:
             path (str): Path to input file
             outdir (str): Path to output directory
+            remove_disorder (bool): If True (default), then disorder groups other than 1 and . are removed.
 
         Returns:
 
@@ -50,10 +52,15 @@ class Cleaner():
             '_symmetry_space_group_name_Hall', '_symmetry_equiv_pos_as_xyz',
             '_atom_site_type_symbol', '_space_group_crystal_system',
             '_space_group_symop_operation_xyz', '_space_group_name_Hall',
-            '_space_group_crystal_system'
+            '_space_group_crystal_system', '_atom_site_occupancy'
         ]
         cf = CifFile.ReadCif(path)
         image = cf[cf.keys()[0]]
+
+        indices_to_drop = []
+        if remove_disorder and '_atom_site_disorder_group' in image.keys():
+            print('Removing disorder groups')
+        
         for key in image.keys():
             if key not in RELEVANT_KEYS:
                 image.RemoveItem(key)
@@ -73,14 +80,17 @@ class Cleaner():
 
     @staticmethod
     def remove_disorder(structure: Structure,
-                        distance: float = 1.0, threshold_circle: float =0.1) -> Structure:
+                        distance: float = 1.0) -> Structure:
         """
         Merges sites within distance that are likely due to structural disorder.
 
-        Inspired by pymatgen merge function code:
+        2
             - we assume that the site properties of the clustered species are all
               the same
             - we assume that we can replace the disorder with an averaged position
+
+
+        Due to the akward treatmeant of partial occupancies, we need to use a bit of overhead for pymatgen
 
         Args:
             structure (pymatgen Structure object):
@@ -93,25 +103,38 @@ class Cleaner():
         crystal = structure.copy()
         d = crystal.distance_matrix
 
-        all_cords = crystal.frac_coords
         indices_to_dump = []
-        for symbol in crystal.symbol_set:
-            sub_matrix = d[crystal.indices_from_symbol(
-                symbol), :][:, crystal.indices_from_symbol(symbol)]
+
+        symbol_indices_dict = get_symbol_indices(crystal)
+        symbol_set = symbol_indices_dict.keys()
+
+        all_coords = crystal.frac_coords
+
+        for symbol in symbol_set:
+            sub_matrix = d[
+                symbol_indices_dict[symbol], :][:, symbol_indices_dict[symbol]]
 
             np.fill_diagonal(sub_matrix, 0)
 
             # perform hierarchical clustering, get flat array of indices
-            clusters = fcluster(
-                linkage(squareform((sub_matrix + sub_matrix.T) / 2)), distance,
-                'distance')
+            #clusters = fcluster(
+            #    linkage(squareform(sub_matrix)), distance,
+            #    'distance')
 
-            symbol_indices = crystal.indices_from_symbol(symbol)
+            clustering = DBSCAN(
+                eps=distance,
+                min_samples=2).fit(all_coords[symbol_indices_dict[symbol]])
+
+            clusters = clustering.labels_
+            #print(linkage(squareform(sub_matrix)))
+
+            symbol_indices = symbol_indices_dict[symbol]
             species_coord = [crystal[i].frac_coords for i in symbol_indices]
             species_prop = [crystal[i].properties for i in symbol_indices]
 
             print(symbol)
             # iterate over clusters
+
             print(clusters)
             for c in np.unique(clusters):
                 inds = np.where(clusters == c)[0]
@@ -120,45 +143,35 @@ class Cleaner():
                 coords = [species_coord[i] for i in inds]
                 props = [species_prop[i] for i in inds]
 
-                # now, average the coordinates, make at this point sure
-                # that the case of len(coords) = 1 is handeled correctly
+                # here, I assume that we did a good ob in finding equivalent atoms
+                # they will probably get the same occupancy assigned in the cif file
+                occupancy = crystal[inds[0]].as_dict()['species'][0]['occu']
+                print(len(inds))
+                sites_to_keep = len(inds) * occupancy
+                print('sites to keep are {}'.format(sites_to_keep))
                 print(coords)
                 if len(coords) == 1:
-                    average_coord = np.concatenate(coords).ravel().tolist()
+                    average_coord = [np.concatenate(coords).ravel().tolist()]
                 else:
-                    # important insight
-                    # if circular, we look at the element in the center and
-                    # get the usual coordination number and average in this way
-                    average_coord = np.mean(coords, axis=0).flatten()
-                    distances = []
-                    for coord in coords:
-                        distances.append(np.linalg.norm(average_coord, coord))
-                    if np.std(distances) < threshold_circle:
-                        print('we found a circle')
-                        # then figure out, what the central element is
-                        # and what its neighbors are
-                        # if one neighbor is metallic, then do not count it.
-                        center_index = closest_index(all_cords, average_coord)
-                        center_species = crystal[center_index].species
-                        center_valence = center_species.group - 10
-
+                    # now as we now, how many sites we should keep we select the n farthest ones
+                    average_coord = incremental_farthest_search(
+                        coords, int(sites_to_keep))
                     print(average_coord)
 
                 print(average_coord)
 
-                # assumptions:
-                # - properties are the same
-                # - averaged coordinates is a good approximation
                 print('average coords are {}'.format(average_coord))
-                crystal.append(
-                    symbol,
-                    average_coord,
-                    validate_proximity=False,
-                    properties=props[0])
+                for coord in average_coord:
+                    crystal.append(
+                        symbol,
+                        coord,
+                        validate_proximity=False,
+                        properties=props[0])
 
         # Now remove the sites that we averaged.
         print('indices to dump {}'.format(indices_to_dump))
-        indices_to_dump = list(set(np.concatenate(indices_to_dump).ravel().tolist()))
+        indices_to_dump = list(
+            set(np.concatenate(indices_to_dump).ravel().tolist()))
         print(indices_to_dump)
         crystal.remove_sites(indices_to_dump)
 

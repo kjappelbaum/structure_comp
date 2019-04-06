@@ -12,6 +12,7 @@ from glob import glob
 import os
 import re
 import unicodedata
+from collections import defaultdict  # thanks Raymond Hettinger!
 import functools
 from .rmsd import parse_periodic_case, rmsd
 from pymatgen import Structure
@@ -19,6 +20,7 @@ import numpy as np
 from scipy import stats
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
+import random
 import logging
 logger = logging.getLogger()
 
@@ -182,3 +184,58 @@ def slugify(value, allow_unicode=False):
             'ascii', 'ignore').decode('ascii')
     value = re.sub(r'[^\w\s-]', '', value).strip().lower()
     return re.sub(r'[-\s]+', '-', value)
+
+
+def incremental_farthest_search(points, k):
+    """
+    Source: https://flothesof.github.io/farthest-neighbors.html
+    Args:
+        points:
+        k:
+
+    Returns:
+
+    """
+    remaining_points = points[:]
+    solution_set = []
+    solution_set.append(remaining_points.pop(\
+                                             random.randint(0, len(remaining_points) - 1)))
+    for _ in range(k - 1):
+        distances = [
+            np.linalg.norm(p - solution_set[0]) for p in remaining_points
+        ]
+        for i, p in enumerate(remaining_points):
+            for j, s in enumerate(solution_set):
+                distances[i] = min(distances[i], np.linalg.norm(p - s))
+        solution_set.append(
+            remaining_points.pop(distances.index(max(distances))))
+    return solution_set
+
+
+def get_symbol_list(structure: Structure) -> list:
+    """
+    Utility function to return symbol list even for structures with partial occupancy.
+    Args:
+        structure (pymatgen structure object):
+
+    Returns:
+
+    """
+    return [s.species_string.split(':')[0] for s in structure.sites]
+
+
+def get_symbol_indices(structure: Structure) -> list:
+    """
+    Utility function to get the symbols of a site even for a structure with partial occupancies.
+
+    Args:
+        structure:
+
+    Returns:
+
+    """
+    symbol_list = get_symbol_list(structure)
+    index_dict = defaultdict(list)
+    for idx, item in enumerate(symbol_list):
+        index_dict[item].append(idx)
+    return dict(index_dict)
