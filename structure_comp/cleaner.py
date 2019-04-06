@@ -16,6 +16,7 @@ import CifFile
 import tempfile
 from pathlib import Path
 import numpy as np
+import re
 from scipy.spatial.distance import squareform
 from scipy.cluster.hierarchy import fcluster, linkage
 import os
@@ -30,7 +31,8 @@ class Cleaner():
         pass
 
     @staticmethod
-    def rewrite_cif(path: str, outdir: str, remove_disorder: bool = True) -> str:
+    def rewrite_cif(path: str, outdir: str,
+                    remove_disorder: bool = True) -> str:
         """
         Reads cif file and keeps only the relevant parts defined in RELEVANT_KEYS.
         Sometimes, it is good to loose information ...
@@ -43,28 +45,102 @@ class Cleaner():
 
         """
         RELEVANT_KEYS = [
-            '_cell_volume', '_cell_angle_gamma', '_cell_angle_beta',
-            '_cell_angle_alpha', '_cell_length_a', '_cell_length_b',
-            '_cell_length_c', '_symmetry_space_group_name_hall',
-            '_symmetry_space_group_name_h', '_symmetry_cell_setting',
-            '_atom_site_label', '_atom_site_fract_x', '_atom_site_fract_y',
-            '_atom_site_fract_z', '_atom_site_charge',
-            '_symmetry_space_group_name_Hall', '_symmetry_equiv_pos_as_xyz',
-            '_atom_site_type_symbol', '_space_group_crystal_system',
-            '_space_group_symop_operation_xyz', '_space_group_name_Hall',
-            '_space_group_crystal_system', '_atom_site_occupancy'
+            '_cell_volume',
+            '_cell_angle_gamma',
+            '_cell_angle_beta',
+            '_cell_angle_alpha',
+            '_cell_length_a',
+            '_cell_length_b',
+            '_cell_length_c',
+            '_symmetry_space_group_name_hall',
+            '_symmetry_space_group_name_h',
+            '_symmetry_cell_setting',
+            '_atom_site_label',
+            '_atom_site_fract_x',
+            '_atom_site_fract_y',
+            '_atom_site_fract_z',
+            '_atom_site_charge',
+            '_symmetry_space_group_name_Hall',
+            '_symmetry_equiv_pos_as_xyz',
+            '_atom_site_type_symbol',
+            '_space_group_crystal_system',
+            '_space_group_symop_operation_xyz',
+            '_space_group_name_Hall',
+            '_space_group_crystal_system',
+            '_space_group_IT_number',
+            '_space_group_name_H - M_alt',
+            '_space_group_name_Hall'
         ]
+
+        LOOP_KEYS = [
+            '_atom_site_label', '_atom_site_fract_x', '_atom_site_fract_y',
+            '_atom_site_fract_z', '_atom_site_charge', '_atom_site_occupancy'
+        ]
+
+        NUMERIC_LOOP_KEYS = ['_atom_site_fract_x', '_atom_site_fract_y',
+            '_atom_site_fract_z', '_atom_site_charge', '_atom_site_occupancy'
+        ]
+
+        CELL_PROPERTIES = [
+            '_cell_volume',
+            '_cell_angle_gamma',
+            '_cell_angle_beta',
+            '_cell_angle_alpha',
+            '_cell_length_a',
+            '_cell_length_b',
+            '_cell_length_c',
+        ]
+
         cf = CifFile.ReadCif(path)
         image = cf[cf.keys()[0]]
 
-        indices_to_drop = []
+        # First, make sure we have proper atom type labels.
+        if '_atom_site_type_symbol' not in image.keys():
+            # then loop over the label and strip all the floats
+            type_symbols = []
+            for label in image['_atom_site_label']:
+                type_symbols.append(re.sub('[^a-zA-Z]+', '', label))
+            image.AddItem('_atom_site_type_symbol', type_symbols)
+
         if remove_disorder and '_atom_site_disorder_group' in image.keys():
+            indices_to_drop = []
             print('Removing disorder groups')
-        
+            for i, dg in enumerate(image['_atom_site_disorder_group']):
+                if dg not in ('.', '1'):
+                    indices_to_drop.append(i)
+
+            if indices_to_drop:
+                image['_atom_site_type_symbol'] = [
+                    i for j, i in enumerate(image['_atom_site_type_symbol'])
+                    if j not in indices_to_drop
+                ]
+                for key in LOOP_KEYS:
+                    if key in image.keys():
+                        loop_fixed = [
+                            i for j, i in enumerate(image[key])
+                            if j not in indices_to_drop
+                        ]
+                        image.RemoveItem(key)
+                        image.AddItem(key, loop_fixed)
+                        image.AddLoopName('_atom_site_type_symbol', key)
+
         for key in image.keys():
             if key not in RELEVANT_KEYS:
                 image.RemoveItem(key)
 
+        image['_atom_site_label'] = image['_atom_site_type_symbol']
+
+        # remove uncertainty brackets
+        for key in NUMERIC_LOOP_KEYS:
+            if key in image.keys():
+                image[key] = [
+                    float(re.sub(r'\([^)]*\)', '', s)) for s in image[key]
+                ]
+
+        for property in CELL_PROPERTIES:
+            image[property] = float(re.sub(r'\([^)]*\)', '', image[property]))
+
+        # make filename that is safe
         name = slugify(Path(path).stem)
         outpath = os.path.join(outdir, '.'.join([name, 'cif']))
         with open(outpath, 'w') as f:
