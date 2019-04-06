@@ -20,7 +20,7 @@ import re
 from scipy.spatial.distance import squareform
 from scipy.cluster.hierarchy import fcluster, linkage
 import os
-from .utils import slugify, incremental_farthest_search, get_symbol_indices
+from .utils import slugify, incremental_farthest_search, get_symbol_indices, closest_index
 from sklearn.cluster import DBSCAN
 
 
@@ -149,10 +149,34 @@ class Cleaner():
         return outpath
 
     @staticmethod
-    def remove_unbound_solvent(crystal):
+    def remove_unbound_solvent(structure: Structure) -> Structure:
+        """
+        Constructs a structure graph and removes unbound solvent molecules
+        if they are in a hardcoded composition list.
+
+        Args:
+            structure (pymatgen structure object=:
+
+        Returns:
+
+        """
+        crystal = structure.copy()
+        molecules_solvent = ['H2 O1', 'H3 O1', 'C2 H6 O S', 'O1']
         nn_strategy = JmolNN()
         sgraph = StructureGraph.with_local_env_strategy(crystal, nn_strategy)
-        sgraph.get_subgraphs_as_molecules()
+        molecules = sgraph.get_subgraphs_as_molecules()
+        for molecule in molecules:
+            cart_coordinates = crystal.cart_coord
+            indices = []
+            if molecule in molecules_solvent:
+                for coord in molecule.cart_coords:
+                    indices.append(closest_index(cart_coordinates, coord))
+
+        crystal.remove_sites(indices)
+
+        return crystal
+
+
 
     @staticmethod
     def remove_disorder(structure: Structure,
@@ -160,7 +184,7 @@ class Cleaner():
         """
         Merges sites within distance that are likely due to structural disorder.
 
-        2
+        Inspired by the pymatgen merge function
             - we assume that the site properties of the clustered species are all
               the same
             - we assume that we can replace the disorder with an averaged position
