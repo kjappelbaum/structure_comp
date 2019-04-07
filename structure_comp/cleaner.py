@@ -12,20 +12,16 @@ from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
 from pymatgen.symmetry import analyzer
 from pymatgen import Structure
-from pymatgen.io.ase import AseAtomsAdaptor
-from ase.geometry import geometry
-
 import CifFile
 import tempfile
 from pathlib import Path
 import numpy as np
 import re
 from collections import defaultdict
-from scipy.spatial.distance import squareform, pdist
+from scipy.spatial.distance import squareform
 from scipy.cluster.hierarchy import fcluster, linkage
 import os
-from .utils import slugify, incremental_farthest_search, get_symbol_indices, closest_index, get_structure_list, get_subgraphs_as_molecules_all
-from sklearn.cluster import DBSCAN
+from .utils import slugify, get_symbol_indices, get_structure_list, get_subgraphs_as_molecules_all
 import logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -188,12 +184,17 @@ class Cleaner():
         for molecule in molecules:
             print(str(molecule.composition))
             if molecule.formula in molecules_solvent:
-                for coord in [site.as_dict()['xyz'] for site in molecule.sites]:
-                    if (coord[0] < crystal.lattice.a) and (coord[1] < crystal.lattice.b) and (coord[2] < crystal.lattice.c):
+                for coord in [
+                        site.as_dict()['xyz'] for site in molecule.sites
+                ]:
+                    if (coord[0] < crystal.lattice.a) and (
+                            coord[1] < crystal.lattice.b) and (
+                                coord[2] < crystal.lattice.c):
                         print(coord)
                         indices.append(
-                            np.where(np.all(cart_coordinates == coord, axis=1))[
-                                0][0])
+                            np.where(
+                                np.all(cart_coordinates == coord,
+                                       axis=1))[0][0])
 
         print(indices)
         crystal.remove_sites(indices)
@@ -285,13 +286,6 @@ class Cleaner():
             clusters = fcluster(
                 linkage(squareform(sub_matrix)), distance, 'distance')
 
-            #     #clustering = DBSCAN(
-            #     #    eps=distance,
-            #     #    min_samples=1).fit(all_coords[symbol_indices_dict[symbol]])
-            #
-            #
-            #     #clusters = clustering.labels_
-            #
             symbol_indices = symbol_indices_dict[symbol]
             species_coord = [crystal[i].frac_coords for i in symbol_indices]
             species_prop = [crystal[i].properties for i in symbol_indices]

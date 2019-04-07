@@ -145,7 +145,9 @@ class DistStatistic(Statistics):
                                            self.structure_list, iterations)
         return jaccards
 
-    def randomized_structure_property(self, property: str = 'density', iterations: int = 5000) -> list:
+    def randomized_structure_property(self,
+                                      property: str = 'density',
+                                      iterations: int = 5000) -> list:
         """
         Returns iterations times the Euclidean distance between two randomly chosen structures
         Args:
@@ -171,8 +173,8 @@ class DistStatistic(Statistics):
         Returns:
             list of Kabsch RMSDs
         """
-        distances = self._randomized_rmsd(
-            self.structure_list, self.structure_list, iterations)
+        distances = self._randomized_rmsd(self.structure_list,
+                                          self.structure_list, iterations)
         return distances
 
 
@@ -208,7 +210,9 @@ class DistComparison():
                                            self.structure_list_2, iterations)
         return jaccards
 
-    def randomized_structure_property(self, property: str = 'density', iterations: int = 5000) -> list:
+    def randomized_structure_property(self,
+                                      property: str = 'density',
+                                      iterations: int = 5000) -> list:
         """
         Returns iterations times the Euclidean distance between two randomly chosen structures
         Args:
@@ -234,10 +238,9 @@ class DistComparison():
         Returns:
             list of Kabsch RMSDs
         """
-        distances = self._randomized_rmsd(
-            self.structure_list_1, self.structure_list_2, iterations)
+        distances = self._randomized_rmsd(self.structure_list_1,
+                                          self.structure_list_2, iterations)
         return distances
-
 
 
 class DistExampleComparison():

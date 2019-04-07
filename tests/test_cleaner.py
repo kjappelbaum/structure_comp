@@ -22,22 +22,28 @@ def test_rewrite_cif(tmp_dir, get_disordered_dmof_path, get_cleaned_dmof_path):
     outfile = Cleaner.rewrite_cif(get_disordered_dmof_path, tmp_dir)
     assert filecmp.cmp(outfile, get_cleaned_dmof_path)
 
+
 @pytest.mark.slow
 def test_remove_solvent():
-    s = Structure.from_file(os.path.join(THIS_DIR, 'structures_w_water/UiO_66_water.cif'))
-    s_no_water = Structure.from_file(os.path.join(THIS_DIR, 'structures_w_water/UiO-66_no_water.cif'))
+    s = Structure.from_file(
+        os.path.join(THIS_DIR, 'structures_w_water/UiO_66_water.cif'))
+    s_no_water = Structure.from_file(
+        os.path.join(THIS_DIR, 'structures_w_water/UiO-66_no_water.cif'))
     s_cleaned = Cleaner.remove_unbound_solvent(s)
     assert s_cleaned == s_no_water
 
+
 def test_remove_disorder():
     ...
+
 
 @pytest.mark.slow
 def test_openbabel(tmp_dir):
     # test structure in which composition shouldn't change
     test_path = os.path.join(tmp_dir, 'UiO-66_no_water.cif')
-    shutil.copy(os.path.join(THIS_DIR, 'structures_w_water/UiO-66_no_water.cif'), test_path)
+    shutil.copy(
+        os.path.join(THIS_DIR, 'structures_w_water/UiO-66_no_water.cif'),
+        test_path)
     Cleaner.openbabel(test_path)
     atoms = read(test_path)
     assert atoms.get_chemical_formula() == 'C192H96O120Zr24'
-

@@ -17,7 +17,7 @@ install:
   - conda info -a
   - conda create -q -n test python=$TRAVIS_PYTHON_VERSION numpy  pytest pytest-cov coverage
   - source activate test
-  - conda install -c openbabel openbabel 
+  - conda install -c openbabel openbabel
   - pip install .[testing]
   - pip install coveralls
 
