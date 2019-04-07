@@ -105,7 +105,7 @@ tries to minimize the in-cluster variance :cite:`tibshirani_elements_2017?` (hen
 Cleaning
 ---------
 A problem when attempting high-throughput studies with experimental structures, e.g from the Cambridge Structural Database,
-is that structures :cite:`sturluson_role_nodate`
+is that structures :cite:`sturluson_role_2019`
 
 * contain unbound water
 * are disordered (e.g. methyl groups in two positions, aromatic carbon exist in several configurations in the :code:`.cif` file
