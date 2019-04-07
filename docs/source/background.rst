@@ -100,3 +100,51 @@ KNN based
 The :math:`k`-nearest neighbor based sample selection clusters the :math:`S` into :math:`k` cluster
 and then selects the examples closest to the centroids. This is based on the rational that :math:`k`nn-clustering
 tries to minimize the in-cluster variance :cite:`tibshirani_elements_2017?` (hence we sample from different clusters as we want a diverse set).
+
+
+Cleaning
+---------
+A problem when attempting high-throughput studies with experimental structures, e.g from the Cambridge Structural Database,
+is that structures :cite:`sturluson_role_nodate`
+
+* contain unbound water
+* are disordered (e.g. methyl groups in two positions, aromatic carbon exist in several configurations in the :code:`.cif` file
+* contain a lot of information that is not necessarily useful for the simulation and can cause problems when using the
+  structure as an input file for simulation packages. Also, dropping unnecessary information can significantly
+  reduce the filesize.
+
+There has already been work done on this topic: The authors of the Core-MOF database described their approach
+in the accompanying paper :cite:`chung_computation-ready_2014` and the group around David Fairen-Jimenez published small scripts that use Mercury
+and a pre-defined list of solvents to remove unbound solvents :cite:`moghadam_development_2017`.
+
+Unfortunately, to our knowledge, there exist no open-source tools at try to address all of
+the three issues mentioned above. We are well aware of the problems of automatic structure sanitation tools :cite:`zarabadi-poor_comment_2019`.
+and also advise to use them with care and to report issues such that we can improve the tools.
+
+
+Rewriting the :code:`cif` files
+................................
+For the first stage of rewriting the :code:`.cif` files, we use the `PyCifRW <https://pypi.org/project/PyCifRW/4.3/>`_ package which is the most robust
+:code:`.cif` parser we are aware of. We keep only the lattice constants and the most important loops (fractional coordinates,
+type and labels as well as the symmetry operations) whilst also using the atomic types as label as this is imperative for some simulation packages.
+
+Furthermore, we remove all uncertainty indications and sanitize the filename (e.g. remove non-unicode and unsafe
+characters such as parentheses).
+
+Optionally, we also remove all disorder groups other than :code:`.` and :code:`1`. This assumes that the disorder
+groups were properly labelled by the crystallographer.
+
+
+Removing unbound solvent
+........................
+For removal of unbound solvent, we construct the structure graph and query for the molecular subgraphs (pymatgen internally
+constructs a supercell to distinguish moleules from e.g. 2D layers).
+If the composition of one of the molecular subgraphs is in our list of solvent molecules we delete the molecule
+from the structure.
+
+
+Removing disorder
+.................
+Please note that this method is experimental and does not work in all cases.
+
+

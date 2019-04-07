@@ -10,29 +10,52 @@ __status__ = 'First Draft, Testing'
 
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
+from pymatgen.symmetry import analyzer
 from pymatgen import Structure
+from pymatgen.io.ase import AseAtomsAdaptor
+from ase.geometry import geometry
 
 import CifFile
 import tempfile
 from pathlib import Path
 import numpy as np
 import re
-from scipy.spatial.distance import squareform
+from collections import defaultdict
+from scipy.spatial.distance import squareform, pdist
 from scipy.cluster.hierarchy import fcluster, linkage
 import os
-from .utils import slugify, incremental_farthest_search, get_symbol_indices, closest_index
+from .utils import slugify, incremental_farthest_search, get_symbol_indices, closest_index, get_structure_list, get_subgraphs_as_molecules_all
 from sklearn.cluster import DBSCAN
+import logging
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 
 class Cleaner():
-    def __init__(self, structure_list: list):
+    def __init__(self, structure_list: list, outdir: str):
         self.structure_list = structure_list
         self.tempdirpath = tempfile.mkdtemp()
-        pass
+        self.outdir = outdir
+
+    @classmethod
+    def from_folder(cls, folder, outdir: str):
+        """
+
+        Args:
+            folder (str): path to folder that is used for construction of the RemoveDuplicates object
+            outdir (str): path to putput directory
+
+        Returns:
+
+        """
+        sl = get_structure_list(folder)
+        return cls(sl, outdir)
 
     @staticmethod
-    def rewrite_cif(path: str, outdir: str,
-                    remove_disorder: bool = True) -> str:
+    def rewrite_cif(path: str,
+                    outdir: str,
+                    remove_disorder: bool = True,
+                    clean_symmetry: float = None) -> str:
         """
         Reads cif file and keeps only the relevant parts defined in RELEVANT_KEYS.
         Sometimes, it is good to loose information ...
@@ -40,36 +63,24 @@ class Cleaner():
             path (str): Path to input file
             outdir (str): Path to output directory
             remove_disorder (bool): If True (default), then disorder groups other than 1 and . are removed.
+            clean_symmetry (float): uses spglib to symmetrize the structure with the specified tolerance, set to None
+                if you do not want to use it
 
         Returns:
 
         """
         RELEVANT_KEYS = [
-            '_cell_volume',
-            '_cell_angle_gamma',
-            '_cell_angle_beta',
-            '_cell_angle_alpha',
-            '_cell_length_a',
-            '_cell_length_b',
-            '_cell_length_c',
-            '_symmetry_space_group_name_hall',
-            '_symmetry_space_group_name_h',
-            '_symmetry_cell_setting',
-            '_atom_site_label',
-            '_atom_site_fract_x',
-            '_atom_site_fract_y',
-            '_atom_site_fract_z',
-            '_atom_site_charge',
-            '_symmetry_space_group_name_Hall',
-            '_symmetry_equiv_pos_as_xyz',
-            '_atom_site_type_symbol',
-            '_space_group_crystal_system',
-            '_space_group_symop_operation_xyz',
-            '_space_group_name_Hall',
-            '_space_group_crystal_system',
-            '_space_group_IT_number',
-            '_space_group_name_H - M_alt',
-            '_space_group_name_Hall'
+            '_cell_volume', '_cell_angle_gamma', '_cell_angle_beta',
+            '_cell_angle_alpha', '_cell_length_a', '_cell_length_b',
+            '_cell_length_c', '_symmetry_space_group_name_hall',
+            '_symmetry_space_group_name_h', '_symmetry_cell_setting',
+            '_atom_site_label', '_atom_site_fract_x', '_atom_site_fract_y',
+            '_atom_site_fract_z', '_atom_site_charge',
+            '_symmetry_space_group_name_Hall', '_symmetry_equiv_pos_as_xyz',
+            '_atom_site_type_symbol', '_space_group_crystal_system',
+            '_space_group_symop_operation_xyz', '_space_group_name_Hall',
+            '_space_group_crystal_system', '_space_group_IT_number',
+            '_space_group_name_H - M_alt', '_space_group_name_Hall'
         ]
 
         LOOP_KEYS = [
@@ -77,8 +88,9 @@ class Cleaner():
             '_atom_site_fract_z', '_atom_site_charge', '_atom_site_occupancy'
         ]
 
-        NUMERIC_LOOP_KEYS = ['_atom_site_fract_x', '_atom_site_fract_y',
-            '_atom_site_fract_z', '_atom_site_charge', '_atom_site_occupancy'
+        NUMERIC_LOOP_KEYS = [
+            '_atom_site_fract_x', '_atom_site_fract_y', '_atom_site_fract_z',
+            '_atom_site_charge', '_atom_site_occupancy'
         ]
 
         CELL_PROPERTIES = [
@@ -104,7 +116,7 @@ class Cleaner():
 
         if remove_disorder and '_atom_site_disorder_group' in image.keys():
             indices_to_drop = []
-            print('Removing disorder groups')
+            logger.info('Removing disorder groups in %s', path)
             for i, dg in enumerate(image['_atom_site_disorder_group']):
                 if dg not in ('.', '1'):
                     indices_to_drop.append(i)
@@ -146,6 +158,12 @@ class Cleaner():
         with open(outpath, 'w') as f:
             f.write(cf.WriteOut() + '\n')
 
+        if clean_symmetry:
+            crystal = Structure.from_file(outpath)
+            spa = analyzer.SpacegroupAnalyzer(crystal, 0.1)
+            crystal = spa.get_refined_structure()
+            crystal.to(filename=outpath)
+
         return outpath
 
     @staticmethod
@@ -164,23 +182,76 @@ class Cleaner():
         molecules_solvent = ['H2 O1', 'H3 O1', 'C2 H6 O S', 'O1']
         nn_strategy = JmolNN()
         sgraph = StructureGraph.with_local_env_strategy(crystal, nn_strategy)
-        molecules = sgraph.get_subgraphs_as_molecules()
+        molecules = get_subgraphs_as_molecules_all(sgraph)
+        cart_coordinates = crystal.cart_coords
+        indices = []
         for molecule in molecules:
-            cart_coordinates = crystal.cart_coord
-            indices = []
-            if molecule in molecules_solvent:
-                for coord in molecule.cart_coords:
-                    indices.append(closest_index(cart_coordinates, coord))
+            print(str(molecule.composition))
+            if molecule.formula in molecules_solvent:
+                for coord in [site.as_dict()['xyz'] for site in molecule.sites]:
+                    if (coord[0] < crystal.lattice.a) and (coord[1] < crystal.lattice.b) and (coord[2] < crystal.lattice.c):
+                        print(coord)
+                        indices.append(
+                            np.where(np.all(cart_coordinates == coord, axis=1))[
+                                0][0])
 
+        print(indices)
         crystal.remove_sites(indices)
 
         return crystal
 
+    @staticmethod
+    def openbabel(cifpath: str,
+                  add_h: bool = True,
+                  opt: bool = True,
+                  ff: str = 'uff',
+                  steps: int = 500,
+                  overwrite: bool = True):
+        """
+        Use openbabel to do local optimization (molecular coordinates with forcefield) or addition of missing hydrogens.
 
+        Args:
+            cifpath (str): path to structure, currently hardcoded to be a cif file
+            add_h (bool): If true (default) openbabel is used to add missing hydrogens
+            opt (bool): If true (default), local optimization is performed
+            ff (str): forcefield for the local optimization
+            steps (int): number of steps for geometry optimization
+            overwrite (bool): If true, input file is overwritten, if false e will add '_openbabel' to the ciffile path stem
+
+        Returns:
+
+        """
+
+        import pybel  # we do not import by default, cause openbabel needs to be installed
+
+        mol = next(pybel.readfile('cif', cifpath))
+
+        if ff not in pybel.forcefields:
+            logger.warning(
+                'the forcefield you selected is not available, will default to uff'
+            )
+            ff = 'uff'
+        if add_h:
+            mol.addh()
+
+        if opt:
+            mol.localopt(forcefield=ff, steps=steps)
+
+        if overwrite:
+            outname = cifpath
+        else:
+            parent = Path(cifpath).parent
+            stem = Path(cifpath).stem
+            outname = os.path.join(parent,
+                                   ''.join([stem, '_openbabel', '.cif']))
+
+        output = pybel.Outputfile("cif", outname, overwrite=True)
+        output.write(mol)
+        output.close()
 
     @staticmethod
     def remove_disorder(structure: Structure,
-                        distance: float = 1.0) -> Structure:
+                        distance: float = 0.1) -> Structure:
         """
         Merges sites within distance that are likely due to structural disorder.
 
@@ -188,9 +259,6 @@ class Cleaner():
             - we assume that the site properties of the clustered species are all
               the same
             - we assume that we can replace the disorder with an averaged position
-
-
-        Due to the akward treatmeant of partial occupancies, we need to use a bit of overhead for pymatgen
 
         Args:
             structure (pymatgen Structure object):
@@ -204,75 +272,63 @@ class Cleaner():
         d = crystal.distance_matrix
 
         indices_to_dump = []
-
+        to_append = defaultdict(list)
         symbol_indices_dict = get_symbol_indices(crystal)
         symbol_set = symbol_indices_dict.keys()
 
-        all_coords = crystal.frac_coords
+        all_coords = crystal.cart_coords
 
         for symbol in symbol_set:
             sub_matrix = d[
                 symbol_indices_dict[symbol], :][:, symbol_indices_dict[symbol]]
-
-            np.fill_diagonal(sub_matrix, 0)
-
             # perform hierarchical clustering, get flat array of indices
-            #clusters = fcluster(
-            #    linkage(squareform(sub_matrix)), distance,
-            #    'distance')
+            clusters = fcluster(
+                linkage(squareform(sub_matrix)), distance, 'distance')
 
-            clustering = DBSCAN(
-                eps=distance,
-                min_samples=2).fit(all_coords[symbol_indices_dict[symbol]])
-
-            clusters = clustering.labels_
-            #print(linkage(squareform(sub_matrix)))
-
+            #     #clustering = DBSCAN(
+            #     #    eps=distance,
+            #     #    min_samples=1).fit(all_coords[symbol_indices_dict[symbol]])
+            #
+            #
+            #     #clusters = clustering.labels_
+            #
             symbol_indices = symbol_indices_dict[symbol]
             species_coord = [crystal[i].frac_coords for i in symbol_indices]
             species_prop = [crystal[i].properties for i in symbol_indices]
 
-            print(symbol)
-            # iterate over clusters
-
-            print(clusters)
             for c in np.unique(clusters):
                 inds = np.where(clusters == c)[0]
-                print(inds)
                 indices_to_dump.append([symbol_indices[i] for i in inds])
                 coords = [species_coord[i] for i in inds]
-                props = [species_prop[i] for i in inds]
 
-                # here, I assume that we did a good ob in finding equivalent atoms
-                # they will probably get the same occupancy assigned in the cif file
-                occupancy = crystal[inds[0]].as_dict()['species'][0]['occu']
-                print(len(inds))
-                sites_to_keep = len(inds) * occupancy
-                print('sites to keep are {}'.format(sites_to_keep))
-                print(coords)
                 if len(coords) == 1:
-                    average_coord = [np.concatenate(coords).ravel().tolist()]
+                    average_coord = np.concatenate(coords).ravel().tolist()
                 else:
-                    # now as we now, how many sites we should keep we select the n farthest ones
-                    average_coord = incremental_farthest_search(
-                        coords, int(sites_to_keep))
-                    print(average_coord)
+                    average_coord = np.mean(coords, axis=0).tolist()
 
-                print(average_coord)
+                to_append[symbol].append(average_coord)
 
-                print('average coords are {}'.format(average_coord))
-                for coord in average_coord:
-                    crystal.append(
-                        symbol,
-                        coord,
-                        validate_proximity=False,
-                        properties=props[0])
-
-        # Now remove the sites that we averaged.
-        print('indices to dump {}'.format(indices_to_dump))
         indices_to_dump = list(
             set(np.concatenate(indices_to_dump).ravel().tolist()))
-        print(indices_to_dump)
+
         crystal.remove_sites(indices_to_dump)
+        to_append = dict(to_append)
+
+        for symbol in to_append.keys():
+            for coord in to_append[symbol]:
+                crystal.append(
+                    symbol,
+                    coord,
+                    validate_proximity=False,
+                )
 
         return crystal
+
+    def run_full_cleaning(self):
+        """
+        A function that runs all available cleaning steps on the structure list.
+
+        Returns:
+
+        """
+        raise NotImplementedError

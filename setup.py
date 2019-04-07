@@ -11,6 +11,7 @@ setup(
     ],
     extras_require={
         'testing': ['pytest', 'pytest-cov<2.6'],
+        'openbabel': ['openbabel'],
         'docs': ['sphinx-rtd-theme', 'sphinxcontrib-bibtex'],
         'pre-commit': [
             'pre-commit==1.11.0', 'yapf==0.24.0', 'prospector==1.1.5',
@@ -24,7 +25,7 @@ setup(
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
-        "Development Status :: 4 - Beta",
+        "Development Status :: 1 - Beta",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
@@ -34,4 +35,4 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules"
     ],
     description=
-    'small, efficient package to remove duplicates from structural databases')
+    'small, efficient package to clean and analyze structural databases')

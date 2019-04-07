@@ -20,6 +20,8 @@ import numpy as np
 from scipy import stats
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
+from pymatgen.core import Molecule
+import networkx as nx
 import random
 import logging
 logger = logging.getLogger()
@@ -239,3 +241,63 @@ def get_symbol_indices(structure: Structure) -> list:
     for idx, item in enumerate(symbol_list):
         index_dict[item].append(idx)
     return dict(index_dict)
+
+
+def get_subgraphs_as_molecules_all(sg, use_weights=False):
+    """
+    Adapatation of
+     http://pymatgen.org/_modules/pymatgen/analysis/graphs.html#StructureGraph.get_subgraphs_as_molecules
+    for our needs
+    """
+
+    # creating a supercell is an easy way to extract
+    # molecules (and not, e.g., layers of a 2D crystal)
+    # without adding extra logic
+
+    supercell_sg = sg*(3,3,3)
+
+    # make undirected to find connected subgraphs
+    supercell_sg.graph = nx.Graph(supercell_sg.graph)
+
+    # find subgraphs
+    all_subgraphs = list(nx.connected_component_subgraphs(supercell_sg.graph))
+
+    # discount subgraphs that lie across *supercell* boundaries
+    # these will subgraphs representing crystals
+    molecule_subgraphs = []
+    for subgraph in all_subgraphs:
+        intersects_boundary = any([d['to_jimage'] != (0, 0, 0)
+                                  for u, v, d in subgraph.edges(data=True)])
+        if not intersects_boundary:
+            molecule_subgraphs.append(subgraph)
+
+    # add specie names to graph to be able to test for isomorphism
+    for subgraph in molecule_subgraphs:
+        for n in subgraph:
+            subgraph.add_node(n, specie=str(supercell_sg.structure[n].specie))
+
+    # now define how we test for isomorphism
+    def node_match(n1, n2):
+        return n1['specie'] == n2['specie']
+    def edge_match(e1, e2):
+        if use_weights:
+            return e1['weight'] == e2['weight']
+        else:
+            return True
+
+
+
+    # get Molecule objects for each subgraph
+    molecules = []
+    for subgraph in molecule_subgraphs:
+
+        coords = [supercell_sg.structure[n].coords for n
+                  in subgraph.nodes()]
+        species = [supercell_sg.structure[n].specie for n
+                  in subgraph.nodes()]
+
+        molecule = Molecule(species, coords)
+
+        molecules.append(molecule)
+
+    return molecules
