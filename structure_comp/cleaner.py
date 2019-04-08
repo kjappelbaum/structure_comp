@@ -193,8 +193,9 @@ class Cleaner():
                         print(coord)
                         indices.append(
                             np.where(
-                                np.all(cart_coordinates == coord,
-                                       axis=1))[0][0])
+                                np.prod(
+                                    np.isclose(cart_coordinates - coord, 0),
+                                    axis=1) == 1)[0][0])
 
         print(indices)
         crystal.remove_sites(indices)
