@@ -146,7 +146,8 @@ class Cleaner():
                 ]
 
         for property in CELL_PROPERTIES:
-            image[property] = float(re.sub(r'\([^)]*\)', '', image[property]))
+            if property in image.keys():
+                image[property] = float(re.sub(r'\([^)]*\)', '', image[property]))
 
         # make filename that is safe
         name = slugify(Path(path).stem)
@@ -208,7 +209,8 @@ class Cleaner():
                   opt: bool = True,
                   ff: str = 'uff',
                   steps: int = 500,
-                  overwrite: bool = True):
+                  overwrite: bool = True,
+                  frozenats: list = []):
         """
         Use openbabel to do local optimization (molecular coordinates with forcefield) or addition of missing hydrogens.
 
@@ -238,6 +240,28 @@ class Cleaner():
 
         if opt:
             mol.localopt(forcefield=ff, steps=steps)
+            # cehck https://github.com/hjkgrp/molSimplify/blob/ed0c63ea33f5ceb543aa6db5ab0f68ef568031a3/molSimplify/Scripts/cellbuilder_tools.py
+            # metals = range(21, 31) + range(39, 49) + range(72, 81)
+            # constr = pybel.OBFFConstraints()
+            # indmtls = []
+            # mtlsnums = []
+            # for iiat, atom in enumerate(pybel.OBMolAtomIter(mol.OBMol)):
+            #     if atom.GetAtomicNum() in metals:
+            #         indmtls.append(iiat)
+            #         mtlsnums.append(atom.GetAtomicNum())
+            #         atom.SetAtomicNum(6)
+            # for cat in frozenats:
+            #     constr.AddAtomConstraint(cat + 1)
+            #
+            # forcefield = pybel.OBForceField.FindForceField(ff)
+            # forcefield.Setup(mol.OBMol, constr)
+            # ## force field optimize structure
+            # forcefield.ConjugateGradients(steos)
+            # forcefield.GetCoordinates(mol.OBMol)
+            # # reset atomic number to metal
+            # for i, iiat in enumerate(indmtls):
+            #     mol.OBMol.GetAtomById(iiat).SetAtomicNum(mtlsnums[i])
+            #
 
         if overwrite:
             outname = cifpath
