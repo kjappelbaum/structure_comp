@@ -25,8 +25,8 @@ def test_randomized_structure_property(get_ten_identical_files):
     ds = DistStatistic(get_ten_identical_files)
     densities = ds.randomized_structure_property(iterations=10)
     num_sites = ds.randomized_structure_property(
-        property='num_sites', iterations=10)
-    volume = ds.randomized_structure_property(property='volume', iterations=10)
+        feature='num_sites', iterations=10)
+    volume = ds.randomized_structure_property(feature='volume', iterations=10)
 
     assert pytest.approx(np.std(densities), 0.001) == 0.0
     assert pytest.approx(np.std(num_sites), 0.001) == 0.0

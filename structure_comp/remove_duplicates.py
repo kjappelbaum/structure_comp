@@ -394,8 +394,8 @@ class RemoveDuplicates():
     def get_graph_hash_dict(self, structure):
         crystal = Structure.from_file(structure)
         name = Path(structure).name
-        hash = get_hash(crystal)
-        self.hash_dict[hash].append(name)
+        graph_hash = get_hash(crystal)
+        self.hash_dict[graph_hash].append(name)
 
     def get_graph_hash_dicts(self):
         self.hash_dict = defaultdict(list)
@@ -461,7 +461,8 @@ class RemoveDuplicates():
             self.pairs = self.compare_graphs(self.rmsd_pairs)
 
         elif self.method == 'hash':
-            RemoveDuplicates.get_graph_hash_dict(self.structure_list)
+            raise NotImplementedError
+            # RemoveDuplicates.get_graph_hash_dict(self.structure_list)
 
     @staticmethod
     def get_rmsd_matrix():

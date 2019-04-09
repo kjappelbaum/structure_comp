@@ -207,7 +207,7 @@ def incremental_farthest_search(points, k):
             np.linalg.norm(p - solution_set[0]) for p in remaining_points
         ]
         for i, p in enumerate(remaining_points):
-            for j, s in enumerate(solution_set):
+            for _, s in enumerate(solution_set):
                 distances[i] = min(distances[i], np.linalg.norm(p - s))
         solution_set.append(
             remaining_points.pop(distances.index(max(distances))))

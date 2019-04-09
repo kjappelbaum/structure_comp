@@ -25,8 +25,8 @@ A third module allows to select samples for computational studies.
 We build on prior work:
 
 *   A more advantaged, but less transferable, topology base comparison was published in 
-    * Barthel, S.; Alexandrov, E. V.; Proserpio, D. M.; Smit, B. Distinguishing Metal–Organic Frameworks. Crystal Growth & Design 2018, 18 (3), 1738–1747.
-    * Lee, Y.; Barthel, S. D.; Dłotko, P.; Moosavi, S. M.; Hess, K.; Smit, B. Quantifying Similarity of Pore-Geometry in Nanoporous Materials. Nature Communications 2017, 8, 15396. https://doi.org/10.1038/ncomms15396.
+    *   Barthel, S.; Alexandrov, E. V.; Proserpio, D. M.; Smit, B. Distinguishing Metal–Organic Frameworks. Crystal Growth & Design 2018, 18 (3), 1738–1747.
+    *   Lee, Y.; Barthel, S. D.; Dłotko, P.; Moosavi, S. M.; Hess, K.; Smit, B. Quantifying Similarity of Pore-Geometry in Nanoporous Materials. Nature Communications 2017, 8, 15396. <https://doi.org/10.1038/ncomms15396>.
 *   The [pymatgen structure comparator](http://pymatgen.org/_modules/pymatgen/analysis/structure_matcher.html) was used e.g.  in Nazarian, D.; Camp, J. S.; Sholl, D. S. A Comprehensive Set of High-Quality Point Charges for Simulations of Metal–Organic Frameworks. Chemistry of Materials 2016, 28 (3), 785–793. 
 
 We make use of the following open-source libraries:
@@ -36,7 +36,6 @@ We make use of the following open-source libraries:
 *   ase 
 *   scipy 
 *   sklearn 
-
 
 ## Installation
 For developers install in editable mode
@@ -49,5 +48,3 @@ and
     pre-commit install
     
 for pre-commit hooks. 
-
-

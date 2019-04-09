@@ -57,14 +57,14 @@ class Statistics():
     @staticmethod
     def _randomized_structure_property(structure_list_a: list,
                                        structure_list_b: list,
-                                       property: str = 'density',
+                                       feature: str = 'density',
                                        iterations: int = 5000) -> list:
         """
 
         Args:
             structure_list_a (list): list of paths to structures
             structure_list_b (list): list of paths to structures
-            property (str): property that is used for the structure comparisons, available options are
+            feature (str): property that is used for the structure comparisons, available options are
                 density, num_sites, volume. Default is density.
             iterations (int): number of comparisons (sampling works with replacement, i.e. the same pair might
             be sampled several times).
@@ -78,11 +78,11 @@ class Statistics():
             random_selection_2 = random.sample(structure_list_b, 1)[0]
             crystal_a = Structure.from_file(random_selection_1)
             crystal_b = Structure.from_file(random_selection_2)
-            if property == 'density':
+            if feature == 'density':
                 diff = np.abs(crystal_a.density - crystal_b.density)
-            elif property == 'num_sites':
+            elif feature == 'num_sites':
                 diff = np.abs(crystal_a.num_sites - crystal_b.num_sites)
-            elif property == 'volume':
+            elif feature == 'volume':
                 diff = np.abs(crystal_a.volume - crystal_b.volume)
             diffs.append(diff)
         return diffs
@@ -146,12 +146,12 @@ class DistStatistic(Statistics):
         return jaccards
 
     def randomized_structure_property(self,
-                                      property: str = 'density',
+                                      feature: str = 'density',
                                       iterations: int = 5000) -> list:
         """
         Returns iterations times the Euclidean distance between two randomly chosen structures
         Args:
-            property (str): property that is used for the structure comparisons, available options are
+            feature (str): property that is used for the structure comparisons, available options are
                 density, num_sites, volume. Default is density.
             iterations (int): number of comparisons (sampling works with replacement, i.e. the same pair might
                   be sampled several times).
@@ -211,12 +211,12 @@ class DistComparison():
         return jaccards
 
     def randomized_structure_property(self,
-                                      property: str = 'density',
+                                      feature: str = 'density',
                                       iterations: int = 5000) -> list:
         """
         Returns iterations times the Euclidean distance between two randomly chosen structures
         Args:
-            property (str): property that is used for the structure comparisons, available options are
+            feature (str): property that is used for the structure comparisons, available options are
                 density, num_sites, volume. Default is density.
             iterations (int): number of comparisons (sampling works with replacement, i.e. the same pair might
                   be sampled several times).

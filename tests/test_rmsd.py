@@ -10,9 +10,6 @@ __status__ = 'First Draft, Testing'
 
 import pytest
 from structure_comp.rmsd import attempt_supercell, parse_periodic_case, rmsd, kabsch_rmsd
-from pymatgen import Structure
-from pathlib import Path
-import tempfile
 from ase.io import read
 from ase.build import niggli_reduce
 import os

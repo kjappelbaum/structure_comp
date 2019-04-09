@@ -145,9 +145,9 @@ class Cleaner():
                     float(re.sub(r'\([^)]*\)', '', s)) for s in image[key]
                 ]
 
-        for property in CELL_PROPERTIES:
-            if property in image.keys():
-                image[property] = float(re.sub(r'\([^)]*\)', '', image[property]))
+        for prop in CELL_PROPERTIES:
+            if prop in image.keys():
+                image[prop] = float(re.sub(r'\([^)]*\)', '', image[prop]))
 
         # make filename that is safe
         name = slugify(Path(path).stem)
@@ -302,8 +302,6 @@ class Cleaner():
         symbol_indices_dict = get_symbol_indices(crystal)
         symbol_set = symbol_indices_dict.keys()
 
-        all_coords = crystal.cart_coords
-
         for symbol in symbol_set:
             sub_matrix = d[
                 symbol_indices_dict[symbol], :][:, symbol_indices_dict[symbol]]
@@ -313,7 +311,6 @@ class Cleaner():
 
             symbol_indices = symbol_indices_dict[symbol]
             species_coord = [crystal[i].frac_coords for i in symbol_indices]
-            species_prop = [crystal[i].properties for i in symbol_indices]
 
             for c in np.unique(clusters):
                 inds = np.where(clusters == c)[0]
