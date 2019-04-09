@@ -160,7 +160,7 @@ class DistStatistic(Statistics):
             list of property distances
         """
         distances = self._randomized_structure_property(
-            self.structure_list, self.structure_list, property, iterations)
+            self.structure_list, self.structure_list, feature, iterations)
         return distances
 
     def randomized_rmsd(self, iterations: int = 5000) -> list:
@@ -225,7 +225,7 @@ class DistComparison():
             list of property distances
         """
         distances = self._randomized_structure_property(
-            self.structure_list_1, self.structure_list_2, property, iterations)
+            self.structure_list_1, self.structure_list_2, feature, iterations)
         return distances
 
     def randomized_rmsd(self, iterations: int = 5000) -> list:
