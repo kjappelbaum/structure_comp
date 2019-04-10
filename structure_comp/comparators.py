@@ -183,15 +183,32 @@ class DistStatistic(Statistics):
 
 
 class DistComparison():
-    def __init__(self, structure_list_1: list, structure_list_2: list):
+    """
+    Comparator to compare the difference or similarity between two distributions. 
+    The idea is here to save the test statistics to the object such that we can
+    then implement some dunder methods to compare different Comparator objects and
+    e.g. find out which distributions are most similar to each other. 
+    """
+
+    def __init__(self,
+                 structure_list_1: list = [],
+                 structure_list_2: list = [],
+                 property_list_1: list = [],
+                 property_list_2: list = []):
         """
 
         Args:
             structure_list_1 (list):
-            structure_list_2:
+            structure_list_2 (list):
         """
         self.structure_list_1 = structure_list_1
         self.structure_list_2 = structure_list_2
+        self.property_list_1 = property_list_1
+        self.property_list_2 = property_list_2
+        self.qq_statistics = None
+        self.rmsds = None
+        self.jaccards = None
+        self.random_structure_property = {}
 
     @classmethod
     def from_folders(cls, folder_1, folder_2, extension='.cif'):
@@ -212,6 +229,7 @@ class DistComparison():
         """
         jaccards = self._randomized_graphs(self.structure_list_1,
                                            self.structure_list_2, iterations)
+        self.jaccards = jaccards
         return jaccards
 
     def randomized_structure_property(self,
@@ -230,6 +248,7 @@ class DistComparison():
         """
         distances = self._randomized_structure_property(
             self.structure_list_1, self.structure_list_2, feature, iterations)
+        self.random_structure_property[feature] = distances
         return distances
 
     def randomized_rmsd(self, iterations: int = 5000) -> list:
@@ -244,12 +263,10 @@ class DistComparison():
         """
         distances = self._randomized_rmsd(self.structure_list_1,
                                           self.structure_list_2, iterations)
+        self.rmsds = distances
         return distances
 
-    @staticmethod
-    def qq_test(property_list_1: list,
-                property_list_2: list,
-                plot: bool = True) -> dict:
+    def qq_test(self, plot: bool = True) -> dict:
         """
         Performs a qq analysis and optionally a plot to compare two distributions.
         Works also for samples of unequal length by using interpolation to find the quantiles of the larger
@@ -258,12 +275,11 @@ class DistComparison():
         As a measure of 'linearity' we perform a Huber linear regression and return the MSE and R^2 scores of the fit
         and pearson correlation coefficient with two-sided p-value
 
-        Compare https://stackoverflow.com/questions/42658252/how-to-create-a-qq-plot-between-two-samples-of-different-size-in-python
-        and https://www.itl.nist.gov/div898/handbook/eda/section3/eda33o.htm.
+        Compare https://stackoverflow.com/questions/42658252/how-to-create-a-qq-plot-between-two-samples-of-different-size-in-python,
+        from which I took the main outline of this function
+        and https://www.itl.nist.gov/div898/handbook/eda/section3/eda33o.htm which contains background information. 
 
         Args:
-            property_list_1 (list): list or numpy array with samples of distribution 1
-            property_list_2 (list): list or numpy array with samples of distribution 1
             plot (bool): if true, it returns a qq plot with diagonal guideline as well as the Huber regression,
                 use %matplotlib inline or %matplotlib notebook when using a jupyter notebook to show the plot inline 
 
@@ -276,6 +292,8 @@ class DistComparison():
 
 
         """
+        property_list_1 = self.property_list_1
+        property_list_2 = self.property_list_2
 
         # Calculate quantiles
         property_list_1.sort()
@@ -320,6 +338,7 @@ class DistComparison():
             'pearson_p_value': pearson[1],
         }
 
+        self.qq_statistics = results_dict
         return results_dict
 
 
