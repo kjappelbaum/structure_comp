@@ -124,7 +124,7 @@ and also advise to use them with care and to report issues such that we can impr
 
 Rewriting the :code:`cif` files
 ................................
-For the first stage of rewriting the :code:`.cif` files, we use the `PyCifRW <https://pypi.org/project/PyCifRW/4.3/>`_ package which is the most robust
+For the first stage of rewriting the :code:`.cif` files, we use the `PyCifRW <https://pypi.org/project/PyCifRW/4.3/>`_ package :cite:`hester_validating_2006` which is the most robust
 :code:`.cif` parser we are aware of. We keep only the lattice constants and the most important loops (fractional coordinates,
 type and labels as well as the symmetry operations) whilst also using the atomic types as label as this is imperative for some simulation packages.
 
