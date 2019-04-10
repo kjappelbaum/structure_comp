@@ -9,16 +9,17 @@ import logging
 from pymatgen import Structure
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
-from .utils import get_structure_list, get_rmsd, closest_index, tanimoto_distance
+from .utils import get_structure_list, get_rmsd, closest_index, tanimoto_distance, get_number_bins
 import random
 from scipy.spatial import distance
 from sklearn.linear_model import HuberRegressor
 from sklearn.metrics import mean_squared_error, r2_score
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, ks_2samp
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
+from scipy import ndimage
 
 logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
@@ -341,6 +342,88 @@ class DistComparison():
         self.qq_statistics = results_dict
         return results_dict
 
+    @staticmethod
+    def _mutual_information_2d(x, y, sigma_ratio=0.1, normalized=False):
+        """
+        Taken from https://gist.github.com/GaelVaroquaux/ead9898bd3c973c40429
+        Modified to automatically adjust bin width, if the distributions to not have the same width,
+        both are binned to the optimal number of bins for the shorter distribution.
+
+        Args:
+            y:
+            normalized:
+
+        Returns:
+
+        """
+        EPS = np.finfo(float).eps
+        width_x = max(x) - min(x)
+        width_y = max(y) - min(y)
+        stdev_x = np.std(x)
+        stdev_y = np.std(y)
+
+        if width_x < width_y:
+            bin = get_number_bins(x)
+        else:
+            bin = get_number_bins(y)
+
+        if stdev_x < stdev_y:
+            sigma = sigma_ratio * stdev_x
+        else:
+            sigma = sigma_ratio * stdev_y
+
+        bins = (bin, bin)
+
+        # make joint histogram
+        jh = np.histogram2d(x, y, bins=bins)[0]
+
+        # smooth the jh with a gaussian filter of given sigma
+        ndimage.gaussian_filter(jh, sigma=sigma, mode='constant', output=jh)
+
+        # compute marginal histograms
+        jh = jh + EPS
+        sh = np.sum(jh)
+        jh = jh / sh
+        s1 = np.sum(jh, axis=0).reshape((-1, jh.shape[0]))
+        s2 = np.sum(jh, axis=1).reshape((jh.shape[1], -1))
+
+        # Normalised Mutual Information of:
+        # Studholme,  jhill & jhawkes (1998).
+        # "A normalized entropy measure of 3-D medical image alignment".
+        # in Proc. Medical Imaging 1998, vol. 3338, San Diego, CA, pp. 132-143.
+        if normalized:
+            mi = ((np.sum(s1 * np.log(s1)) + np.sum(s2 * np.log(s2))) / np.sum(
+                jh * np.log(jh))) - 1
+        else:
+            mi = (np.sum(jh * np.log(jh)) - np.sum(s1 * np.log(s1)) - np.sum(
+                s2 * np.log(s2)))
+
+        return mi
+
+    def properties_test_statistics(self):
+        """
+        Preforms a range of statistical tests of the property distributions and returns a dictionary with the statistics. 
+        Returns:
+
+        """
+
+        # Mutual information, continuous form from https://gist.github.com/GaelVaroquaux/ead9898bd3c973c40429
+        mi = DistComparison._mutual_information_2d(self.property_list_1,
+                                                   self.property_list_2)
+
+        # Kolmogorov-Smirnov
+        ks = ks_2samp(self.property_list_1, self.property_list_2)
+
+        # Anderson-Darlin
+
+
+        result_dict = {
+            'mutual_information': mi,
+            'ks_statistic': ks[0],
+            'ks_p_value': ks[1],
+        }
+
+        return result_dict
 
 class DistExampleComparison():
     def __init__(self, structure_list, file):
