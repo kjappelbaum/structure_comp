@@ -12,9 +12,13 @@ from pymatgen.analysis.local_env import JmolNN
 from .utils import get_structure_list, get_rmsd, closest_index, tanimoto_distance
 import random
 from scipy.spatial import distance
+from sklearn.linear_model import HuberRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+from scipy.stats import pearsonr
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
@@ -241,6 +245,82 @@ class DistComparison():
         distances = self._randomized_rmsd(self.structure_list_1,
                                           self.structure_list_2, iterations)
         return distances
+
+    @staticmethod
+    def qq_test(property_list_1: list,
+                property_list_2: list,
+                plot: bool = True) -> dict:
+        """
+        Performs a qq analysis and optionally a plot to compare two distributions.
+        Works also for samples of unequal length by using interpolation to find the quantiles of the larger
+        sample.
+        
+        As a measure of 'linearity' we perform a Huber linear regression and return the MSE and R^2 scores of the fit
+        and pearson correlation coefficient with two-sided p-value
+
+        Compare https://stackoverflow.com/questions/42658252/how-to-create-a-qq-plot-between-two-samples-of-different-size-in-python
+        and https://www.itl.nist.gov/div898/handbook/eda/section3/eda33o.htm.
+
+        Args:
+            property_list_1 (list): list or numpy array with samples of distribution 1
+            property_list_2 (list): list or numpy array with samples of distribution 1
+            plot (bool): if true, it returns a qq plot with diagonal guideline as well as the Huber regression,
+                use %matplotlib inline or %matplotlib notebook when using a jupyter notebook to show the plot inline 
+
+        Returns:
+            dictionary with the following statistics
+            mse
+            r2
+            pearson_correlation_coefficient
+            pearson_p_value
+
+
+        """
+
+        # Calculate quantiles
+        property_list_1.sort()
+        quantile_levels1 = np.arange(
+            len(property_list_1), dtype=float) / len(property_list_1)
+
+        property_list_2.sort()
+        quantile_levels2 = np.arange(
+            len(property_list_2), dtype=float) / len(property_list_2)
+
+        # Use the smaller set of quantile levels to create the plot
+        quantile_levels = quantile_levels2
+
+        # We already have the set of quantiles for the smaller data set
+        quantiles2 = property_list_1
+
+        # We find the set of quantiles for the larger data set using linear interpolation
+        quantiles1 = np.interp(quantile_levels, quantile_levels1,
+                               property_list_2)
+
+        maxval = max(property_list_1[-1], property_list_2[-1])
+        minval = min(property_list_1[0], property_list_2[0])
+
+        hr = HuberRegressor()
+        hr.fit(quantiles1, quantiles2)
+        predictions = hr.predict(quantiles1)
+        mse = mean_squared_error(predictions, quantiles2)
+        r2 = r2_score(predictions, quantiles2)
+        pearson = pearsonr(quantiles1, quantiles2)
+
+        if plot:
+            plt.scatter(quantiles1, quantiles2)
+            plt.plot([minval - minval * 0.1, maxval + maxval * 0.1],
+                     [minval - minval * 0.1, maxval + maxval * 0.1], '--k')
+            plt.plot(quantiles1, predictions, label='Huber Regression')
+            plt.legend()
+
+        results_dict = {
+            'mse': mse,
+            'r2': r2,
+            'pearson_correlation_coefficient': pearson[0],
+            'pearson_p_value': pearson[1],
+        }
+
+        return results_dict
 
 
 class DistExampleComparison():
