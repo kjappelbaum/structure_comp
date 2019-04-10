@@ -17,6 +17,7 @@ from pymatgen import Structure
 
 THIS_DIR = os.path.dirname(__file__)
 
+
 @pytest.fixture(scope='module')
 def get_disordered_dmof_path():
     return os.path.join(THIS_DIR, 'structures_w_disorder', '986883.cif')
@@ -26,6 +27,16 @@ def get_disordered_dmof_path():
 def get_cleaned_dmof_path():
     return os.path.join(THIS_DIR, 'structures_w_disorder',
                         '986883_cleaned.cif')
+
+
+@pytest.fixture(scope='module')
+def get_znbttbbdc_path():
+    return os.path.join(THIS_DIR, 'structures_for_rewrite', 'ZnBTTBBDC.cif')
+
+
+@pytest.fixture(scope='module')
+def get_cleaned_znbttbbdc_path():
+    return os.path.join(THIS_DIR, 'structures_for_rewrite', 'znbttbbdc.cif')
 
 
 @pytest.fixture(scope='session')
@@ -55,6 +66,7 @@ def get_distributions():
     t2_dist = t2.pdf(x)
 
     return [t1_dist, t2_dist, normal_dist, exponential_dist]
+
 
 @pytest.fixture(scope='module')
 def get_ten_identical_files():

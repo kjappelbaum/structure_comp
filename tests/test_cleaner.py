@@ -13,14 +13,18 @@ import os
 import filecmp
 import shutil
 from pymatgen import Structure
-from ase.io import read, write
+from ase.io import read
 from structure_comp.cleaner import Cleaner
 THIS_DIR = os.path.dirname(__file__)
 
 
-def test_rewrite_cif(tmp_dir, get_disordered_dmof_path, get_cleaned_dmof_path):
+def test_rewrite_cif(tmp_dir, get_disordered_dmof_path, get_cleaned_dmof_path,
+                     get_znbttbbdc_path, get_cleaned_znbttbbdc_path):
     outfile = Cleaner.rewrite_cif(get_disordered_dmof_path, tmp_dir)
     assert filecmp.cmp(outfile, get_cleaned_dmof_path)
+
+    outfile2 = Cleaner.rewrite_cif(get_znbttbbdc_path, tmp_dir)
+    assert filecmp.cmp(outfile2, get_cleaned_znbttbbdc_path)
 
 
 @pytest.mark.slow

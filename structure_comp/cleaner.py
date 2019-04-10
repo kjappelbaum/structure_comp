@@ -99,12 +99,26 @@ class Cleaner():
             '_cell_length_c',
         ]
 
-        cf = CifFile.ReadCif(path)
-        image = cf[cf.keys()[0]]
-
-        if ('_atom_site_fract_x' not in image.keys()) or (
-                '_atom_site_fract_y' not in image.keys()) or (
-                    '_atom_site_fract_z' not in image.keys()):
+        try:
+            cf = CifFile.ReadCif(path)
+            image = cf[cf.keys()[0]]
+            if ('_atom_site_fract_x' not in image.keys()) or (
+                    '_atom_site_fract_y' not in image.keys()) or (
+                        '_atom_site_fract_z' not in image.keys()):
+                raise ValueError
+        except ValueError:
+            logger.error(
+                'the file %s seems to be invalid because we were unable to find '
+                'the atomic positions will return input path but '
+                'this file will likely cause errors and needs to be checked',
+                path)
+            return path
+        except FileNotFoundError:
+            logger.error(
+                'the file %s was not found', path
+            )
+            return path
+        except Exception:
             logger.error(
                 'the file %s seems to be invalid will return input path but '
                 'this file will likely cause errors and needs to be checked',
