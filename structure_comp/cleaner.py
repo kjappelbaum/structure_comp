@@ -102,66 +102,77 @@ class Cleaner():
         cf = CifFile.ReadCif(path)
         image = cf[cf.keys()[0]]
 
-        # First, make sure we have proper atom type labels.
-        if '_atom_site_type_symbol' not in image.keys():
-            # then loop over the label and strip all the floats
-            type_symbols = []
-            for label in image['_atom_site_label']:
-                type_symbols.append(re.sub('[^a-zA-Z]+', '', label))
-            image.AddItem('_atom_site_type_symbol', type_symbols)
+        if ('_atom_site_fract_x' not in image.keys()) or (
+                '_atom_site_fract_y' not in image.keys()) or (
+                    '_atom_site_fract_z' not in image.keys()):
+            logger.error(
+                'the file %s seems to be invalid will return input path but '
+                'this file will likely cause errors and needs to be checked',
+                path)
+            return path
+        else:
+            # First, make sure we have proper atom type labels.
+            if ('_atom_site_type_symbol' not in image.keys()) and (
+                    '_atom_site_symbol' not in image.keys()):
+                # then loop over the label and strip all the floats
+                type_symbols = []
+                for label in image['_atom_site_label']:
+                    type_symbols.append(re.sub('[^a-zA-Z]+', '', label))
+                image.AddItem('_atom_site_type_symbol', type_symbols)
 
-        if remove_disorder and '_atom_site_disorder_group' in image.keys():
-            indices_to_drop = []
-            logger.info('Removing disorder groups in %s', path)
-            for i, dg in enumerate(image['_atom_site_disorder_group']):
-                if dg not in ('.', '1'):
-                    indices_to_drop.append(i)
+            if remove_disorder and '_atom_site_disorder_group' in image.keys():
+                indices_to_drop = []
+                logger.info('Removing disorder groups in %s', path)
+                for i, dg in enumerate(image['_atom_site_disorder_group']):
+                    if dg not in ('.', '1'):
+                        indices_to_drop.append(i)
 
-            if indices_to_drop:
-                image['_atom_site_type_symbol'] = [
-                    i for j, i in enumerate(image['_atom_site_type_symbol'])
-                    if j not in indices_to_drop
-                ]
-                for key in LOOP_KEYS:
-                    if key in image.keys():
-                        loop_fixed = [
-                            i for j, i in enumerate(image[key])
-                            if j not in indices_to_drop
-                        ]
-                        image.RemoveItem(key)
-                        image.AddItem(key, loop_fixed)
-                        image.AddLoopName('_atom_site_type_symbol', key)
+                if indices_to_drop:
+                    image['_atom_site_type_symbol'] = [
+                        i
+                        for j, i in enumerate(image['_atom_site_type_symbol'])
+                        if j not in indices_to_drop
+                    ]
+                    for key in LOOP_KEYS:
+                        if key in image.keys():
+                            loop_fixed = [
+                                i for j, i in enumerate(image[key])
+                                if j not in indices_to_drop
+                            ]
+                            image.RemoveItem(key)
+                            image.AddItem(key, loop_fixed)
+                            image.AddLoopName('_atom_site_type_symbol', key)
 
-        for key in image.keys():
-            if key not in RELEVANT_KEYS:
-                image.RemoveItem(key)
+            for key in image.keys():
+                if key not in RELEVANT_KEYS:
+                    image.RemoveItem(key)
 
-        image['_atom_site_label'] = image['_atom_site_type_symbol']
+            image['_atom_site_label'] = image['_atom_site_type_symbol']
 
-        # remove uncertainty brackets
-        for key in NUMERIC_LOOP_KEYS:
-            if key in image.keys():
-                image[key] = [
-                    float(re.sub(r'\([^)]*\)', '', s)) for s in image[key]
-                ]
+            # remove uncertainty brackets
+            for key in NUMERIC_LOOP_KEYS:
+                if key in image.keys():
+                    image[key] = [
+                        float(re.sub(r'\([^)]*\)', '', s)) for s in image[key]
+                    ]
 
-        for prop in CELL_PROPERTIES:
-            if prop in image.keys():
-                image[prop] = float(re.sub(r'\([^)]*\)', '', image[prop]))
+            for prop in CELL_PROPERTIES:
+                if prop in image.keys():
+                    image[prop] = float(re.sub(r'\([^)]*\)', '', image[prop]))
 
-        # make filename that is safe
-        name = slugify(Path(path).stem)
-        outpath = os.path.join(outdir, '.'.join([name, 'cif']))
-        with open(outpath, 'w') as f:
-            f.write(cf.WriteOut() + '\n')
+            # make filename that is safe
+            name = slugify(Path(path).stem)
+            outpath = os.path.join(outdir, '.'.join([name, 'cif']))
+            with open(outpath, 'w') as f:
+                f.write(cf.WriteOut() + '\n')
 
-        if clean_symmetry:
-            crystal = Structure.from_file(outpath)
-            spa = analyzer.SpacegroupAnalyzer(crystal, 0.1)
-            crystal = spa.get_refined_structure()
-            crystal.to(filename=outpath)
+            if clean_symmetry:
+                crystal = Structure.from_file(outpath)
+                spa = analyzer.SpacegroupAnalyzer(crystal, 0.1)
+                crystal = spa.get_refined_structure()
+                crystal.to(filename=outpath)
 
-        return outpath
+            return outpath
 
     @staticmethod
     def remove_unbound_solvent(structure: Structure) -> Structure:
