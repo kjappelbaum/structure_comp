@@ -14,7 +14,8 @@ import random
 from scipy.spatial import distance
 from sklearn.linear_model import HuberRegressor
 from sklearn.metrics import mean_squared_error, r2_score
-from scipy.stats import pearsonr, ks_2samp
+from sklearn.metrics.pairwise import euclidean_distances
+from scipy.stats import pearsonr, ks_2samp, mannwhitneyu, ttest_ind
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
@@ -493,7 +494,66 @@ class DistComparison():
 
         return mi
 
-    def properties_test_statistics(self):
+    # MMD test taken from https://github.com/paruby/ml-basics/blob/master/Statistical%20Hypothesis%20Testing.ipynb,
+    # maybe use shogon
+    @staticmethod
+    def _optimal_kernel_width(samples):
+        """
+        Following a example from Dougal J. Sutherland use the median pairwise squared distances as heuristic.
+        Args:
+            samples:
+
+        Returns:
+
+        """
+        sub = np.vstack(samples)
+        sub = sub[np.random.choice(
+            sub.shape[0], min(1000, sub.shape[0]), replace=False)]
+        d2 = euclidean_distances(sub, squared=True)
+        med = np.median(d2[np.triu_indices_from(d2, k=1)], overwrite_input=True)
+        return med
+
+    @staticmethod
+    def _gaussian_kernel(z, length):
+        z = z[:, :, None]
+        pre_exp = ((z - z.T) ** 2).sum(axis=1)
+        return np.exp(-(pre_exp / length))
+
+    @staticmethod
+    def _mmd(x, y, rbf_width):
+        n = len(x)
+        m = len(y)
+        z = np.concatenate([x, y])
+        k = DistComparison._gaussian_kernel(z, rbf_width)
+
+        kxx = k[0:n, 0:n]
+        kxy = k[n:, 0:n]
+        kyy = k[n:, n:]
+
+        return (kxx.sum() / (n ** 2)) - (2 * kxy.sum() / (n * m)) + (kyy.sum() /
+                                                                     (m ** 2))
+    @staticmethod
+    def mmd_test(x, y):
+        rbf_width = DistComparison._optimal_kernel_width([x, y])
+        mmd_array = DistComparison._mmd(x, y, rbf_width)
+        n_samples = min([500, x.shape[0], y.shape[0]])
+        null_dist = DistComparison._mmd_null(x, y, rbf_width, n_samples)
+        p_value = (null_dist[:, None] > mmd_array).sum() / float(n_samples)
+
+        return mmd_array, p_value
+
+    @staticmethod
+    def _mmd_null(x, y, rbf_width, n_samples):
+        s = [False for _ in range(n_samples)]
+        z = np.concatenate([x, y])
+        for i in range(n_samples):
+            np.random.shuffle(z)
+            s[i] = DistComparison._mmd(z[0:len(x)], z[len(x):], rbf_width)
+        s = np.array(s)
+        return s
+
+    @staticmethod
+    def _properties_test_statistics(property_list_1, property_list_2):
         """
         Preforms a range of statistical tests of the property distributions and returns a dictionary with the statistics. 
         Returns:
@@ -501,18 +561,41 @@ class DistComparison():
         """
 
         # Mutual information, continuous form from https://gist.github.com/GaelVaroquaux/ead9898bd3c973c40429
-        mi = DistComparison._mutual_information_2d(self.property_list_1,
-                                                   self.property_list_2)
+        mi = DistComparison._mutual_information_2d(property_list_1,
+                                                   property_list_2)
 
         # Kolmogorov-Smirnov
-        ks = ks_2samp(self.property_list_1, self.property_list_2)
+        ks = ks_2samp(property_list_1, property_list_2)
 
-        # Anderson-Darlin
+        # Anderson-Darling
+
+        # maximum mean discrepancy, maybe make it optional and then use
+        # the linear implementation in shogun to do this, ore use medium pairwise squared distance to
+        # estimate the kernel bandwidth as in https://github.com/dougalsutherland/mmd/blob/master/examples/mmd%20regression%20example.ipynb
+        logger.warning(
+            'the current implementation of mmd is not optimal, '
+            'a optional support for shogon (selects optimal kernel, linear algorithm) '
+            'will be implemented in a further release')
+
+        mmd, mmd_p = DistComparison.mmd_test(property_list_1, property_list_2)
+
+        # Mann-Whitney U
+        mwu = mannwhitneyu(property_list_1, property_list_2)
+
+        # t-test
+        ttest = ttest_ind(property_list_1, property_list_2)
+
 
         result_dict = {
             'mutual_information': mi,
             'ks_statistic': ks[0],
             'ks_p_value': ks[1],
+            'mann_whitney_u_statistic': mwu[0],
+            'mann_whitney_u_p_value': mwu[1],
+            'mmd_statistic': mmd,
+            'mmd_p_value': mmd_p,
+            'ttest_statistic': ttest[0],
+            'ttest_p_value': ttest[1],
         }
 
         return result_dict
@@ -683,41 +766,4 @@ def fingerprint_based_distances(fingerprint_list, other_fingerprint,
     return pd.DataFrame(distances)
 
 
-# MMD test taken from https://github.com/paruby/ml-basics/blob/master/Statistical%20Hypothesis%20Testing.ipynb
-def gaussian_kernel(z, length):
-    z = z[:, :, None]
-    pre_exp = ((z - z.T)**2).sum(axis=1)
-    return np.exp(-(pre_exp / length))
 
-
-def mmd(x, y, kernel, kernel_parameters):
-    n = len(x)
-    m = len(y)
-    z = np.concatenate([x, y])
-    k = kernel(z, kernel_parameters)
-
-    kxx = k[0:n, 0:n]
-    kxy = k[n:, 0:n]
-    kyy = k[n:, n:]
-
-    return (kxx.sum() / (n**2)) - (2 * kxy.sum() / (n * m)) + (kyy.sum() /
-                                                               (m**2))
-
-
-def mmd_test(x, y, kernel, kernel_parameters):
-    mmd_array = mmd(x, y, kernel, kernel_parameters)
-    n_samples = 100
-    null_dist = mmd_null(x, y, kernel, kernel_parameters, n_samples)
-    p_value = (null_dist[:, None] > mmd_array).sum() / float(n_samples)
-
-    return mmd_array, p_value
-
-
-def mmd_null(x, y, kernel, kernel_parameters, n_samples):
-    s = [False for _ in range(n_samples)]
-    z = np.concatenate([x, y])
-    for i in range(n_samples):
-        np.random.shuffle(z)
-        s[i] = mmd(z[0:len(x)], z[len(x):], kernel, kernel_parameters)
-    s = np.array(s)
-    return s

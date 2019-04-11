@@ -67,3 +67,16 @@ def test_qq_test(get_two_numeric_property_dataframes):
         assert pytest.approx(
             result_dict[column]['pearson_correlation_coefficient'],
             0.001) == 1.0
+
+
+def test_mmd_test(get_two_distributions):
+    # make sure we get a p-value close to zero for different distributions and
+    # a significant one if the distributions are the same
+
+    normal_dist = get_two_distributions[0]
+    laplace = get_two_distributions[1]
+    statistic_0, pvalue_0 = DistComparison.mmd_test(normal_dist.reshape(-1, 1), laplace.reshape(-1, 1))
+    statistic_1, pvalue_1 = DistComparison.mmd_test(normal_dist.reshape(-1, 1), normal_dist.reshape(-1, 1))
+
+    assert pvalue_0 < 0.1
+    assert pvalue_1 > 0.95

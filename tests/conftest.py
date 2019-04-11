@@ -15,6 +15,7 @@ import numpy as np
 from scipy import stats
 from pymatgen import Structure
 import pandas as pd
+from scipy.stats import laplace, norm
 
 THIS_DIR = os.path.dirname(__file__)
 
@@ -91,3 +92,16 @@ def get_two_numeric_property_dataframes():
     df1.drop(columns=['name', 'Unnamed: 0'], inplace=True)
 
     return df0, df1
+
+
+@pytest.fixture(scope='module')
+def get_two_distributions():
+    n = 220
+    mu = 0.0
+    sigma = 1
+    b = np.sqrt(0.5)
+
+    x = norm.rvs(size=n) * np.sqrt(sigma) + mu
+    y = laplace.rvs(size=n, loc=mu, scale=b)
+
+    return x, y
