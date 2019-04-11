@@ -38,7 +38,26 @@ def test_remove_solvent():
 
 
 def test_remove_disorder():
+    """
+    No good implementation yet.
+    """
     ...
+
+
+def test_rewrite_all(tmp_dir):
+    """
+    Tests class constructor method and the concurrent rewriting loop. 
+    """
+
+    indir = os.path.join(THIS_DIR, 'structures')
+    outdir = os.path.join(tmp_dir, 'rewrite_test')
+    cleaner_object = Cleaner.from_folder(indir, outdir)
+
+    cleaner_object.rewrite_all_cifs()
+
+    # This is a weak test but since we tested the files themselves
+    # in another test it is good enough 
+    assert len(os.listdir(indir)) == len(os.listdir(outdir))
 
 
 @pytest.mark.slow

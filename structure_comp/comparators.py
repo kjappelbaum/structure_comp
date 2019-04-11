@@ -191,6 +191,9 @@ class DistComparison():
     e.g. find out which distributions are most similar to each other. 
     """
 
+    # ToDo: implement option to provide lists of lists of properties and then loop over the 'feature columns'
+    # in the statistical tests
+
     def __init__(self,
                  structure_list_1: list = [],
                  structure_list_2: list = [],

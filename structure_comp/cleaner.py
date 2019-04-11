@@ -17,10 +17,13 @@ import tempfile
 from pathlib import Path
 import numpy as np
 import re
+from tqdm.autonotebook import tqdm
+from functools import partial
 from collections import defaultdict
 from scipy.spatial.distance import squareform
 from scipy.cluster.hierarchy import fcluster, linkage
 import os
+import concurrent.futures
 from .utils import slugify, get_symbol_indices, get_structure_list, get_subgraphs_as_molecules_all
 import logging
 logger = logging.getLogger()
@@ -32,6 +35,7 @@ class Cleaner():
         self.structure_list = structure_list
         self.tempdirpath = tempfile.mkdtemp()
         self.outdir = outdir
+        self.rewritten_paths = []
 
     @classmethod
     def from_folder(cls, folder, outdir: str):
@@ -63,7 +67,7 @@ class Cleaner():
                 if you do not want to use it
 
         Returns:
-
+            outpath (str)
         """
         RELEVANT_KEYS = [
             '_cell_volume', '_cell_angle_gamma', '_cell_angle_beta',
@@ -114,9 +118,7 @@ class Cleaner():
                 path)
             return path
         except FileNotFoundError:
-            logger.error(
-                'the file %s was not found', path
-            )
+            logger.error('the file %s was not found', path)
             return path
         except Exception:
             logger.error(
@@ -365,11 +367,32 @@ class Cleaner():
 
         return crystal
 
-    def run_full_cleaning(self):
+    def rewrite_all_cifs(self,
+                         remove_disorder: bool = True,
+                         clean_symmetry: float = None):
         """
-        A function that runs all available cleaning steps on the structure list.
+        Loops concurrently over all cifs in a folder and rewrites them.
 
+        Args:
+            remove_disorder (bool): If True (default), then disorder groups other than 1 and . are removed.
+            clean_symmetry (float): uses spglib to symmetrize the structure with the specified tolerance, set to None
+                if you do not want to use it
+                
         Returns:
 
         """
-        raise NotImplementedError
+        if not os.path.exists(self.outdir):
+            logger.info('Will create directory %s', self.outdir)
+            os.makedirs(self.outdir)
+
+        partial_rewrite_cifs = partial(
+            Cleaner.rewrite_cif,
+            outdir=self.outdir,
+            remove_disorder=remove_disorder,
+            clean_symmetry=clean_symmetry)
+
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            for outpath in tqdm(
+                    executor.map(partial_rewrite_cifs, self.structure_list),
+                    total=len(self.structure_list)):
+                self.rewritten_paths.append(outpath)
