@@ -80,7 +80,8 @@ class Cleaner():
             '_atom_site_type_symbol', '_space_group_crystal_system',
             '_space_group_symop_operation_xyz', '_space_group_name_Hall',
             '_space_group_crystal_system', '_space_group_IT_number',
-            '_space_group_name_H - M_alt', '_space_group_name_Hall'
+            '_space_group_name_H - M_alt', '_space_group_name_Hall',
+            '_symmetry_space_group_name_H-M', '_symmetry_int_tables_number'
         ]
 
         LOOP_KEYS = [
@@ -377,7 +378,7 @@ class Cleaner():
             remove_disorder (bool): If True (default), then disorder groups other than 1 and . are removed.
             clean_symmetry (float): uses spglib to symmetrize the structure with the specified tolerance, set to None
                 if you do not want to use it
-                
+
         Returns:
 
         """
