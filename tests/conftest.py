@@ -14,6 +14,7 @@ from glob import glob
 import numpy as np
 from scipy import stats
 from pymatgen import Structure
+import pandas as pd
 
 THIS_DIR = os.path.dirname(__file__)
 
@@ -77,3 +78,16 @@ def get_ten_identical_files():
 def get_ten_identical_files_and_one_file():
     return [os.path.join(THIS_DIR, 'structures', 'Cu-BTC.cif')
             ] * 10 + os.path.join(THIS_DIR, 'structures', 'Cu-BTC.cif')
+
+
+@pytest.fixture(scope='module')
+def get_two_numeric_property_dataframes():
+    df0 = pd.read_csv(
+        os.path.join(THIS_DIR, 'dataframes', 'cof_pore_properties.csv'))
+    df1 = pd.read_csv(
+        os.path.join(THIS_DIR, 'dataframes', 'mof_pore_properties.csv'))
+
+    df0.drop(columns=['name', 'Unnamed: 0'], inplace=True)
+    df1.drop(columns=['name', 'Unnamed: 0'], inplace=True)
+
+    return df0, df1

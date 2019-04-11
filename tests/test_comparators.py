@@ -9,7 +9,7 @@ __date__ = '28.03.19'
 __status__ = 'First Draft, Testing'
 
 import pytest
-from structure_comp.comparators import DistStatistic
+from structure_comp.comparators import DistStatistic, DistComparison
 import os
 import numpy as np
 THIS_DIR = os.path.dirname(__file__)
@@ -43,3 +43,27 @@ def test_randomized_graphs(get_ten_identical_files):
     assert pytest.approx(sum(jaccards), 0.001) == 0.0
 
 
+def test_qq_test(get_two_numeric_property_dataframes):
+    # test two dataframes of different length
+    df0 = get_two_numeric_property_dataframes[0]
+    df1 = get_two_numeric_property_dataframes[1]
+
+    comparator = DistComparison(property_list_1=df0, property_list_2=df1)
+
+    result_dict = comparator.qq_test(plot=False)
+
+    assert len(result_dict) == len(df0.columns)
+
+    # now make sure that it calculates something meaningful
+    # for two times the same dataset, we should get a diagonal
+
+    comparator = DistComparison(property_list_1=df0, property_list_2=df0)
+
+    result_dict = comparator.qq_test(plot=False)
+
+    for column in df0.columns.values:
+        assert pytest.approx(result_dict[column]['mse'], 0.001) == 0.0
+        assert pytest.approx(result_dict[column]['r2'], 0.001) == 1.0
+        assert pytest.approx(
+            result_dict[column]['pearson_correlation_coefficient'],
+            0.001) == 1.0

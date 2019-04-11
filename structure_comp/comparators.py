@@ -20,9 +20,13 @@ import pandas as pd
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 from scipy import ndimage
+import concurrent.futures
+from functools import partial
 
 logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
+
+# ToDo (maybe) make sure that input data is numeric?
 
 
 class Statistics():
@@ -209,7 +213,11 @@ class DistComparison():
         self.structure_list_2 = structure_list_2
         self.property_list_1 = property_list_1
         self.property_list_2 = property_list_2
-        self.feature_names = 'feature_0'
+        self.feature_names = []
+        self.qq_statistics = {}
+        self.rmsds = None
+        self.jaccards = None
+        self.random_structure_property = {}
 
         if not isinstance(self.property_list_1, type(self.property_list_2)):
             raise ValueError('The two property inputs must be of same type')
@@ -220,6 +228,23 @@ class DistComparison():
             logger.debug('Input seems to be a dataframe')
             self.list_of_list_mode = True
             self.feature_names = self.property_list_1.columns.values
+            logger.debug('will use %s as feature names', self.feature_names)
+            _tmp_property_list_1 = []
+
+            for feature in self.feature_names:
+                _tmp_property_list_1.append(
+                    self.property_list_1[feature].values.tolist())
+            self.property_list_1 = _tmp_property_list_1
+
+            _tmp_property_list_2 = []
+            for feature in self.feature_names:
+                _tmp_property_list_2.append(
+                    self.property_list_2[feature].values.tolist())
+            self.property_list_2 = _tmp_property_list_2
+
+            assert len(self.property_list_1) == len(self.feature_names)
+            assert len(self.property_list_2) == len(self.feature_names)
+
         else:
             # Check if the input is a list of list (i.e. multiple feature columns)
             # if this is the case, we have to iterate over the lists to compute the test statistics
@@ -243,11 +268,6 @@ class DistComparison():
                     )
                 else:
                     self.list_of_list_mode = False
-
-        self.qq_statistics = None
-        self.rmsds = None
-        self.jaccards = None
-        self.random_structure_property = {}
 
     @classmethod
     def from_folders(cls,
@@ -311,34 +331,15 @@ class DistComparison():
         self.rmsds = distances
         return distances
 
-    def qq_test(self, plot: bool = True) -> dict:
-        """
-        Performs a qq analysis and optionally a plot to compare two distributions.
-        Works also for samples of unequal length by using interpolation to find the quantiles of the larger
-        sample.
-        
-        As a measure of 'linearity' we perform a Huber linear regression and return the MSE and R^2 scores of the fit
-        and pearson correlation coefficient with two-sided p-value
+    @staticmethod
+    def _single_qq_test(pl_1, pl_2, plot: bool = False):
 
-        Compare https://stackoverflow.com/questions/42658252/how-to-create-a-qq-plot-between-two-samples-of-different-size-in-python,
-        from which I took the main outline of this function
-        and https://www.itl.nist.gov/div898/handbook/eda/section3/eda33o.htm which contains background information. 
-
-        Args:
-            plot (bool): if true, it returns a qq plot with diagonal guideline as well as the Huber regression,
-                use %matplotlib inline or %matplotlib notebook when using a jupyter notebook to show the plot inline 
-
-        Returns:
-            dictionary with the following statistics
-            mse
-            r2
-            pearson_correlation_coefficient
-            pearson_p_value
-
-
-        """
-        property_list_1 = self.property_list_1
-        property_list_2 = self.property_list_2
+        if len(pl_1) > len(pl_2):
+            property_list_1 = pl_1
+            property_list_2 = pl_2
+        else:
+            property_list_1 = pl_2
+            property_list_2 = pl_1
 
         # Calculate quantiles
         property_list_1.sort()
@@ -353,18 +354,18 @@ class DistComparison():
         quantile_levels = quantile_levels2
 
         # We already have the set of quantiles for the smaller data set
-        quantiles2 = property_list_1
+        quantiles2 = property_list_2
 
         # We find the set of quantiles for the larger data set using linear interpolation
         quantiles1 = np.interp(quantile_levels, quantile_levels1,
-                               property_list_2)
+                               property_list_1)
 
         maxval = max(property_list_1[-1], property_list_2[-1])
         minval = min(property_list_1[0], property_list_2[0])
 
         hr = HuberRegressor()
-        hr.fit(quantiles1, quantiles2)
-        predictions = hr.predict(quantiles1)
+        hr.fit(quantiles1.reshape(-1, 1), quantiles2)
+        predictions = hr.predict(quantiles1.reshape(-1, 1))
         mse = mean_squared_error(predictions, quantiles2)
         r2 = r2_score(predictions, quantiles2)
         pearson = pearsonr(quantiles1, quantiles2)
@@ -383,8 +384,56 @@ class DistComparison():
             'pearson_p_value': pearson[1],
         }
 
-        self.qq_statistics = results_dict
         return results_dict
+
+    def qq_test(self, plot: bool = True) -> dict:
+        """
+        Performs a qq analysis and optionally a plot to compare two distributions.
+        Works also for samples of unequal length by using interpolation to find the quantiles of the larger
+        sample.
+        
+        As a measure of 'linearity' we perform a Huber linear regression and return the MSE and R^2 scores of the fit
+        and pearson correlation coefficient with two-sided p-value
+
+        Compare https://stackoverflow.com/questions/42658252/how-to-create-a-qq-plot-between-two-samples-of-different-size-in-python,
+        from which I took the main outline of this function
+        and https://www.itl.nist.gov/div898/handbook/eda/section3/eda33o.htm which contains background information. 
+
+        Args:
+            plot (bool): if true, it returns a qq plot with diagonal guideline as well as the Huber regression,
+                use %matplotlib inline or %matplotlib notebook when using a jupyter notebook to show the plot inline 
+
+        Returns:
+            dictionary of dictionaries with the following statistics
+            mse
+            r2
+            pearson_correlation_coefficient
+            pearson_p_value
+
+
+        """
+        if self.list_of_list_mode:
+            # concurrently loop of the different feature columns.
+            with concurrent.futures.ProcessPoolExecutor() as executor:
+                logger.debug('looping over feature columns for QQ statistics')
+                partial_single_qq = partial(
+                    DistComparison._single_qq_test, plot=plot)
+                out_dict = {}
+                for i, results_dict in enumerate(
+                        executor.map(partial_single_qq, self.property_list_1,
+                                     self.property_list_2)):
+                    logger.debug('Creating QQ statistics for %s',
+                                 self.feature_names[i])
+                    self.qq_statistics[self.feature_names[i]] = results_dict
+                    out_dict[self.feature_names[i]] = results_dict
+            return out_dict
+        else:
+            out_dict = {}
+            results_dict = DistComparison._single_qq_test(
+                self.property_list_1, self.property_list_2, plot)
+            self.qq_statistics[self.feature_names] = results_dict
+            out_dict[self.feature_names] = results_dict
+            return out_dict
 
     @staticmethod
     def _mutual_information_2d(x, y, sigma_ratio=0.1, normalized=False):
