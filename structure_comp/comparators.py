@@ -191,34 +191,75 @@ class DistComparison():
     e.g. find out which distributions are most similar to each other. 
     """
 
-    # ToDo: implement option to provide lists of lists of properties and then loop over the 'feature columns'
-    # in the statistical tests
-
     def __init__(self,
                  structure_list_1: list = [],
                  structure_list_2: list = [],
-                 property_list_1: list = [],
-                 property_list_2: list = []):
+                 property_list_1: [list, pd.DataFrame] = [],
+                 property_list_2: [list, pd.DataFrame] = []):
         """
 
         Args:
             structure_list_1 (list):
             structure_list_2 (list):
+            property_list_1 (list or pd.DataFrame):
+            property_list_2 (list or pd.DataFrame): 
+            
         """
         self.structure_list_1 = structure_list_1
         self.structure_list_2 = structure_list_2
         self.property_list_1 = property_list_1
         self.property_list_2 = property_list_2
+        self.feature_names = 'feature_0'
+
+        if not isinstance(self.property_list_1, type(self.property_list_2)):
+            raise ValueError('The two property inputs must be of same type')
+
+        # Check if input is a dataframe. If this is the case, extract the column names
+        # and convert it to list of lists
+        if isinstance(property_list_1, pd.DataFrame):
+            logger.debug('Input seems to be a dataframe')
+            self.list_of_list_mode = True
+            self.feature_names = self.property_list_1.columns.values
+        else:
+            # Check if the input is a list of list (i.e. multiple feature columns)
+            # if this is the case, we have to iterate over the lists to compute the test statistics
+            if all(isinstance(i, list) for i in property_list_1):
+                if all(isinstance(i, list) for i in property_list_2):
+                    self.list_of_list_mode = True
+                    self.feature_names = [
+                        '_'.join(['feature', i])
+                        for i in range(len(self.property_list_1))
+                    ]
+                else:
+                    logger.error(
+                        'One input seems to be a list of list whereas the other one is not. '
+                        'The property lists must be both of the same type. Please check your inputs.'
+                    )
+            else:
+                if all(isinstance(i, list) for i in property_list_2):
+                    logger.error(
+                        'One input seems to be a list of list whereas the other one is not. '
+                        'The property lists must be both of the same type. Please check your inputs.'
+                    )
+                else:
+                    self.list_of_list_mode = False
+
         self.qq_statistics = None
         self.rmsds = None
         self.jaccards = None
         self.random_structure_property = {}
 
     @classmethod
-    def from_folders(cls, folder_1, folder_2, extension='cif'):
+    def from_folders(cls,
+                     folder_1: str,
+                     folder_2: str,
+                     property_list_1: [list, pd.DataFrame] = [],
+                     property_list_2: [list, pd.DataFrame] = [],
+                     extension='cif'):
+        """Constructor method for a DistComparison object"""
         sl_1 = get_structure_list(folder_1, extension)
         sl_2 = get_structure_list(folder_2, extension)
-        return cls(sl_1, sl_2)
+        return cls(sl_1, sl_2, property_list_1, property_list_2)
 
     def randomized_graphs(self, iterations: int = 5000) -> list:
         """
@@ -419,7 +460,6 @@ class DistComparison():
 
         # Anderson-Darlin
 
-
         result_dict = {
             'mutual_information': mi,
             'ks_statistic': ks[0],
@@ -427,6 +467,7 @@ class DistComparison():
         }
 
         return result_dict
+
 
 class DistExampleComparison():
     def __init__(self, structure_list, file):
