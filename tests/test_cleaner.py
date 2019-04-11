@@ -56,7 +56,7 @@ def test_rewrite_all(tmp_dir):
     cleaner_object.rewrite_all_cifs()
 
     # This is a weak test but since we tested the files themselves
-    # in another test it is good enough 
+    # in another test it is good enough
     assert len(os.listdir(indir)) == len(os.listdir(outdir))
 
 

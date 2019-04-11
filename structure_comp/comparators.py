@@ -122,7 +122,7 @@ class DistStatistic(Statistics):
         self.structure_list = structure_list
 
     @classmethod
-    def from_folder(cls, folder: str, extension: str = '.cif'):
+    def from_folder(cls, folder: str, extension: str = 'cif'):
         """
 
         Args:
@@ -215,7 +215,7 @@ class DistComparison():
         self.random_structure_property = {}
 
     @classmethod
-    def from_folders(cls, folder_1, folder_2, extension='.cif'):
+    def from_folders(cls, folder_1, folder_2, extension='cif'):
         sl_1 = get_structure_list(folder_1, extension)
         sl_2 = get_structure_list(folder_2, extension)
         return cls(sl_1, sl_2)
@@ -434,7 +434,7 @@ class DistExampleComparison():
         self.file = file
 
     @classmethod
-    def from_folder_and_file(class_object, folder, file, extension='.cif'):
+    def from_folder_and_file(class_object, folder, file, extension='cif'):
         sl = get_structure_list(folder, extension)
         return class_object(sl, file)
 
