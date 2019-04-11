@@ -14,7 +14,7 @@ import re
 import unicodedata
 from collections import defaultdict  # thanks Raymond Hettinger!
 import functools
-from .rmsd import parse_periodic_case, rmsd
+from .rmsd import parse_periodic_case, kabsch_rmsd
 from pymatgen import Structure
 import numpy as np
 from scipy import stats
@@ -49,7 +49,7 @@ def get_structure_list(directory: str, extension: str = 'cif') -> list:
 @functools.lru_cache(maxsize=128, typed=False)
 def get_rmsd(structure_a: Structure, structure_b: Structure) -> float:
     _, P, _, Q = parse_periodic_case(structure_a, structure_b)
-    result = rmsd(P, Q)
+    result = kabsch_rmsd(P, Q)
     return result
 
 
