@@ -251,8 +251,8 @@ class RemoveDuplicates():
             scalar_feature_df.drop(columns=['name']).values,
             metric='euclidean')
         dist_matrix = squareform(distances)
-
-        i, j = np.where(np.fill_diagonal(dist_matrix, 1) < threshold)
+        np.fill_diagonal(dist_matrix, 1)
+        i, j = np.where(dist_matrix < threshold)
         duplicates = list(set(map(tuple, map(sorted, list(zip(i,
                                                  j))))))
 
