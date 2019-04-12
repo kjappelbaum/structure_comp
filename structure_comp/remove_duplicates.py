@@ -235,7 +235,7 @@ class RemoveDuplicates():
 
     @staticmethod
     def get_scalar_distance_matrix(scalar_feature_df: pd.DataFrame,
-                                   threshold: float = 0.05) -> list:
+                                   threshold: float = 0.001) -> list:
         """
         Get structures that probably have the same composition.
 
