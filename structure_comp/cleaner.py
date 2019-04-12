@@ -69,6 +69,7 @@ class Cleaner():
         Returns:
             outpath (str)
         """
+        # ToDo: I want to have it pretty strict with pre-defined keys but maybe a regex can take care of captitiliaztion
         RELEVANT_KEYS = [
             '_cell_volume', '_cell_angle_gamma', '_cell_angle_beta',
             '_cell_angle_alpha', '_cell_length_a', '_cell_length_b',
@@ -82,7 +83,8 @@ class Cleaner():
             '_space_group_crystal_system', '_space_group_IT_number',
             '_space_group_name_H - M_alt', '_space_group_name_Hall',
             '_symmetry_space_group_name_H-M', '_symmetry_int_tables_number',
-            '_space_group_name_H-M_alt '
+            '_space_group_name_H-M_alt ', '_symmetry_Int_Tables_number',
+            '_symmetry_space_group_name_Hall', ''
         ]
 
         LOOP_KEYS = [
