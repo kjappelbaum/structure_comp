@@ -81,7 +81,8 @@ class Cleaner():
             '_space_group_symop_operation_xyz', '_space_group_name_Hall',
             '_space_group_crystal_system', '_space_group_IT_number',
             '_space_group_name_H - M_alt', '_space_group_name_Hall',
-            '_symmetry_space_group_name_H-M', '_symmetry_int_tables_number'
+            '_symmetry_space_group_name_H-M', '_symmetry_int_tables_number',
+            '_space_group_name_H-M_alt '
         ]
 
         LOOP_KEYS = [
