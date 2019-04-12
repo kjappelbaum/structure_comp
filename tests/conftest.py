@@ -96,7 +96,7 @@ def get_two_numeric_property_dataframes():
 
 @pytest.fixture(scope='module')
 def get_two_distributions():
-    n = 220
+    n = 500
     mu = 0.0
     sigma = 1
     b = np.sqrt(0.5)

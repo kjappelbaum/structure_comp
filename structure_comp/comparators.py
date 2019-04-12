@@ -15,7 +15,7 @@ from scipy.spatial import distance
 from sklearn.linear_model import HuberRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.metrics.pairwise import euclidean_distances
-from scipy.stats import pearsonr, ks_2samp, mannwhitneyu, ttest_ind, anderson_ksamp, wilcoxon
+from scipy.stats import pearsonr, ks_2samp, mannwhitneyu, ttest_ind, anderson_ksamp,
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
@@ -24,11 +24,12 @@ from scipy import ndimage
 import concurrent.futures
 from functools import partial
 
+
 logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
 
 # ToDo (maybe) make sure that input data is numeric?
-
+# Todo: grid search for kernel width in MMD test
 
 class Statistics():
     def __init__(self):
@@ -535,7 +536,7 @@ class DistComparison():
                                                                      (m ** 2))
     @staticmethod
     def mmd_test(x, y):
-        rbf_width = DistComparison._optimal_kernel_width([x, y])
+        rbf_width = DistComparison._optimal_kernel_width([x, y]) / 4.0
         mmd_array = DistComparison._mmd(x, y, rbf_width)
         n_samples = min([500, x.shape[0], y.shape[0]])
         null_dist = DistComparison._mmd_null(x, y, rbf_width, n_samples)

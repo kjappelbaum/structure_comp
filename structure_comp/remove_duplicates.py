@@ -251,10 +251,15 @@ class RemoveDuplicates():
             scalar_feature_df.drop(columns=['name']).values,
             metric='euclidean')
         dist_matrix = squareform(distances)
-        i, j = np.where(dist_matrix + np.eye(len(dist_matrix)) < threshold)
+
+        i, j = np.where(dist_matrix < threshold)
+        duplicates = list(set(map(tuple, map(sorted, list(zip(i,
+                                                 j))))))
+        # remove the diagonal elements, we go this way to avoid memory issues of alternatives such as np.eye
+        out_tup = [i for i in duplicates if i[0] != i[1]]
+
         logger.debug('found {} and {} composition duplicates'.format(i, j))
-        return list(set(map(tuple, map(sorted, list(zip(i,
-                                                        j))))))  # super ugly
+        return out_tup
 
     @staticmethod
     def compare_rmsd(tupellist: list,
