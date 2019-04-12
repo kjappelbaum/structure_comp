@@ -14,6 +14,7 @@
 data_e:\reddy\znbttb~1\y
 
 _symmetry_cell_setting                  Triclinic
+_symmetry_space_group_name_H-M          P-1
 loop_
   _symmetry_equiv_pos_as_xyz
          'x, y, z'           
