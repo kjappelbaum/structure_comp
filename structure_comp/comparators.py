@@ -15,7 +15,7 @@ from scipy.spatial import distance
 from sklearn.linear_model import HuberRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.metrics.pairwise import euclidean_distances
-from scipy.stats import pearsonr, ks_2samp, mannwhitneyu, ttest_ind, anderson_ksamp,
+from scipy.stats import pearsonr, ks_2samp, mannwhitneyu, ttest_ind, anderson_ksamp
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
@@ -24,12 +24,12 @@ from scipy import ndimage
 import concurrent.futures
 from functools import partial
 
-
 logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
 
 # ToDo (maybe) make sure that input data is numeric?
 # Todo: grid search for kernel width in MMD test
+
 
 class Statistics():
     def __init__(self):
@@ -512,13 +512,14 @@ class DistComparison():
         sub = sub[np.random.choice(
             sub.shape[0], min(1000, sub.shape[0]), replace=False)]
         d2 = euclidean_distances(sub, squared=True)
-        med = np.median(d2[np.triu_indices_from(d2, k=1)], overwrite_input=True)
+        med = np.median(
+            d2[np.triu_indices_from(d2, k=1)], overwrite_input=True)
         return med
 
     @staticmethod
     def _gaussian_kernel(z, length):
         z = z[:, :, None]
-        pre_exp = ((z - z.T) ** 2).sum(axis=1)
+        pre_exp = ((z - z.T)**2).sum(axis=1)
         return np.exp(-(pre_exp / length))
 
     @staticmethod
@@ -532,8 +533,9 @@ class DistComparison():
         kxy = k[n:, 0:n]
         kyy = k[n:, n:]
 
-        return (kxx.sum() / (n ** 2)) - (2 * kxy.sum() / (n * m)) + (kyy.sum() /
-                                                                     (m ** 2))
+        return (kxx.sum() / (n**2)) - (2 * kxy.sum() / (n * m)) + (kyy.sum() /
+                                                                   (m**2))
+
     @staticmethod
     def mmd_test(x, y):
         rbf_width = DistComparison._optimal_kernel_width([x, y]) / 4.0
@@ -581,7 +583,8 @@ class DistComparison():
             'a optional support for shogon (selects optimal kernel, linear algorithm) '
             'will be implemented in a further release')
 
-        mmd, mmd_p = DistComparison.mmd_test(property_list_1.reshape(-1,1), property_list_2.reshape(-1,1))
+        mmd, mmd_p = DistComparison.mmd_test(
+            property_list_1.reshape(-1, 1), property_list_2.reshape(-1, 1))
 
         # Mann-Whitney U
         mwu = mannwhitneyu(property_list_1, property_list_2)
@@ -615,17 +618,22 @@ class DistComparison():
         if self.list_of_list_mode:
             # concurrently loop of the different feature columns.
             with concurrent.futures.ProcessPoolExecutor() as executor:
-                logger.debug('looping over feature columns for properties statistics')
+                logger.debug(
+                    'looping over feature columns for properties statistics')
                 out_dict = {}
                 for i, results_dict in enumerate(
-                        executor.map(DistComparison._properties_test_statistics, self.property_list_1,
-                                     self.property_list_2)):
+                        executor.map(
+                            DistComparison._properties_test_statistics,
+                            self.property_list_1, self.property_list_2)):
                     logger.debug('Creating statistics for %s',
                                  self.feature_names[i])
-                    self.properties_statistics[self.feature_names[i]] = results_dict
+                    self.properties_statistics[self.
+                                               feature_names[i]] = results_dict
                     out_dict[self.feature_names[i]] = results_dict
 
-                mmd, mmd_p = DistComparison.mmd_test(np.array(self.property_list_1), np.array(self.property_list_2))
+                mmd, mmd_p = DistComparison.mmd_test(
+                    np.array(self.property_list_1),
+                    np.array(self.property_list_2))
                 overall_statistics = {
                     'mmd_statistic': mmd,
                     'mmd_p_value': mmd_p,
@@ -805,6 +813,3 @@ def fingerprint_based_distances(fingerprint_list, other_fingerprint,
         distances.append(distance_dict)
 
     return pd.DataFrame(distances)
-
-
-
