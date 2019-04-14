@@ -36,6 +36,7 @@ logger.setLevel(logging.DEBUG)
 
 # ToDo: add XTalComp support
 # ToDo: more useful error message when file cannot be read
+# ToDo: run it in a contextmanager?
 
 class RemoveDuplicates():
     """

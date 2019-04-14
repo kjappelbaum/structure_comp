@@ -36,6 +36,19 @@ class Statistics():
         pass
 
     @staticmethod
+    def _get_one_graph_comparison(structure_list_a, structure_list_b, _):
+        random_selection_1 = random.sample(structure_list_a, 1)[0]
+        random_selection_2 = random.sample(structure_list_b, 1)[0]
+        crystal_a = Structure.from_file(random_selection_1)
+        crystal_b = Structure.from_file(random_selection_2)
+        nn_strategy = JmolNN()
+        sgraph_a = StructureGraph.with_local_env_strategy(
+            crystal_a, nn_strategy)
+        sgraph_b = StructureGraph.with_local_env_strategy(
+            crystal_b, nn_strategy)
+        return sgraph_a.diff(sgraph_b, strict=False)['dist']
+
+    @staticmethod
     def _randomized_graphs(structure_list_a: list,
                            structure_list_b: list,
                            iterations: int = 5000) -> list:
@@ -51,19 +64,38 @@ class Statistics():
         Returns:
             list of length iterations of the Jaccard distances
         """
+
         diffs = []
-        for _ in tqdm(range(iterations)):
-            random_selection_1 = random.sample(structure_list_a, 1)[0]
-            random_selection_2 = random.sample(structure_list_b, 1)[0]
-            crystal_a = Structure.from_file(random_selection_1)
-            crystal_b = Structure.from_file(random_selection_2)
-            nn_strategy = JmolNN()
-            sgraph_a = StructureGraph.with_local_env_strategy(
-                crystal_a, nn_strategy)
-            sgraph_b = StructureGraph.with_local_env_strategy(
-                crystal_b, nn_strategy)
-            diffs.append(sgraph_a.diff(sgraph_b, strict=False)['dist'])
+
+        get_one_graph_comparison_partial = partial(
+            Statistics._get_one_graph_comparison, structure_list_a,
+            structure_list_b)
+
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            logger.debug('iterating for graph comparisons')
+
+            for diff in tqdm(
+                    executor.map(get_one_graph_comparison_partial,
+                                 range(iterations)),
+                    total=len(range(iterations))):
+                diffs.append(diff)
+
         return diffs
+
+    @staticmethod
+    def _get_one_randomized_structure_property(structure_list_a,
+                                               structure_list_b, feature, _):
+        random_selection_1 = random.sample(structure_list_a, 1)[0]
+        random_selection_2 = random.sample(structure_list_b, 1)[0]
+        crystal_a = Structure.from_file(random_selection_1)
+        crystal_b = Structure.from_file(random_selection_2)
+        if feature == 'density':
+            diff = np.abs(crystal_a.density - crystal_b.density)
+        elif feature == 'num_sites':
+            diff = np.abs(crystal_a.num_sites - crystal_b.num_sites)
+        elif feature == 'volume':
+            diff = np.abs(crystal_a.volume - crystal_b.volume)
+        return diff
 
     @staticmethod
     def _randomized_structure_property(structure_list_a: list,
@@ -84,19 +116,27 @@ class Statistics():
 
         """
         diffs = []
-        for _ in tqdm(range(iterations)):
-            random_selection_1 = random.sample(structure_list_a, 1)[0]
-            random_selection_2 = random.sample(structure_list_b, 1)[0]
-            crystal_a = Structure.from_file(random_selection_1)
-            crystal_b = Structure.from_file(random_selection_2)
-            if feature == 'density':
-                diff = np.abs(crystal_a.density - crystal_b.density)
-            elif feature == 'num_sites':
-                diff = np.abs(crystal_a.num_sites - crystal_b.num_sites)
-            elif feature == 'volume':
-                diff = np.abs(crystal_a.volume - crystal_b.volume)
-            diffs.append(diff)
+        get_one_randomized_structure_property_partial = partial(
+            Statistics._get_one_randomized_structure_property,
+            structure_list_a, structure_list_b, feature)
+
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            logger.debug('iterating for graph comparisons')
+
+            for diff in tqdm(
+                    executor.map(get_one_randomized_structure_property_partial,
+                                 range(iterations)),
+                    total=len(range(iterations))):
+                diffs.append(diff)
+
         return diffs
+
+    @staticmethod
+    def _get_one_rmsd(structure_list_a, structure_list_b, _):
+        random_selection_1 = random.sample(structure_list_a, 1)[0]
+        random_selection_2 = random.sample(structure_list_b, 1)[0]
+        a = get_rmsd(random_selection_1, random_selection_2)
+        return a
 
     @staticmethod
     def _randomized_rmsd(structure_list_a: list,
@@ -114,11 +154,16 @@ class Statistics():
 
         """
         rmsds = []
-        for _ in tqdm(range(iterations)):
-            random_selection_1 = random.sample(structure_list_a, 1)[0]
-            random_selection_2 = random.sample(structure_list_b, 1)[0]
-            a = get_rmsd(random_selection_1, random_selection_2)
-            rmsds.append(a)
+
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            logger.debug('iterating for graph comparisons')
+
+            get_one_rmsd_partial = partial(Statistics._get_one_rmsd,
+                                           structure_list_a, structure_list_b)
+            for rmsd in tqdm(
+                    executor.map(get_one_rmsd_partial, range(iterations)),
+                    total=len(range(iterations))):
+                rmsds.append(rmsd)
 
         return rmsds
 

@@ -39,7 +39,7 @@ def test_randomized_structure_property(get_ten_identical_files):
 
 def test_randomized_graphs(get_ten_identical_files):
     ds = DistStatistic(get_ten_identical_files)
-    jaccards = ds.randomized_graphs(iterations=3)
+    jaccards = ds.randomized_graphs(iterations=2)
     assert pytest.approx(sum(jaccards), 0.001) == 0.0
 
 
