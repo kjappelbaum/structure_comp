@@ -5,11 +5,12 @@ __copyright__ = 'MIT License'
 __maintainer__ = 'Kevin M. Jablonka'
 __email__ = 'kevin.jablonka@epfl.ch'
 __version__ = '0.1.0'
-__date__ = '18.03.19'
+__date__ = '14.04.19'
 __status__ = 'First Draft, Testing'
 
 import os
 from pathlib import Path
+from contextlib import contextmanager
 import numpy as np
 import shutil
 from pymatgen import Structure
@@ -33,10 +34,10 @@ from collections import defaultdict
 logger = logging.getLogger('RemoveDuplicates')
 logger.setLevel(logging.DEBUG)
 
-
 # ToDo: add XTalComp support
 # ToDo: more useful error message when file cannot be read
 # ToDo: run it in a contextmanager?
+
 
 class RemoveDuplicates():
     """
@@ -60,6 +61,7 @@ class RemoveDuplicates():
         self.method = method
         self.similar_composition_tuples = []
         self.try_supercell = try_supercell
+        self.tempdirpath = None
 
     def __repr__(self):
         return f'RemoveDuplicates on {len(self.structure_list)!r} structures'
@@ -254,8 +256,7 @@ class RemoveDuplicates():
         dist_matrix = squareform(distances)
         np.fill_diagonal(dist_matrix, 1)
         i, j = np.where(dist_matrix < threshold)
-        duplicates = list(set(map(tuple, map(sorted, list(zip(i,
-                                                 j))))))
+        duplicates = list(set(map(tuple, map(sorted, list(zip(i, j))))))
 
         logger.debug('found {} and {} composition duplicates'.format(i, j))
         return duplicates
@@ -391,10 +392,6 @@ class RemoveDuplicates():
                         pairs.append(result)
         return pairs
 
-    def janitor(self):
-        logger.debug('cleaning directory up')
-        shutil.rmtree(self.tempdirpath)
-
     def get_graph_hash_dict(self, structure):
         crystal = Structure.from_file(structure)
         name = Path(structure).name
@@ -414,59 +411,66 @@ class RemoveDuplicates():
 
         return self.hash_dict
 
+    @contextmanager
     def run_filtering(self):
         """
 
         Returns:
 
         """
-        logger.info('running filtering workflow')
+        try:
+            logger.info('running filtering workflow')
 
-        self.get_reduced_structures()
+            self.get_reduced_structures()
 
-        if not self.cached:
-            self.reduced_structure_list = get_structure_list(
-                self.reduced_structure_dir)
-            logger.debug('we have %s reduced structures',
-                         len(self.reduced_structure_list))
+            if not self.cached:
+                self.reduced_structure_list = get_structure_list(
+                    self.reduced_structure_dir)
+                logger.debug('we have %s reduced structures',
+                             len(self.reduced_structure_list))
 
-            self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df(
-                self.reduced_structure_list)
-        else:
-            logger.debug('we have %s reduced structures',
-                         len(self.reduced_structure_dict))
-            self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df_cached(
-                self.reduced_structure_dict)
+                self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df(
+                    self.reduced_structure_list)
+            else:
+                logger.debug('we have %s reduced structures',
+                             len(self.reduced_structure_dict))
+                self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df_cached(
+                    self.reduced_structure_dict)
 
-        logger.debug('columns of dataframe are %s',
-                     self.scalar_feature_matrix.columns)
+            logger.debug('columns of dataframe are %s',
+                         self.scalar_feature_matrix.columns)
 
-        self.similar_composition_tuples = RemoveDuplicates.get_scalar_distance_matrix(
-            self.scalar_feature_matrix)
+            self.similar_composition_tuples = RemoveDuplicates.get_scalar_distance_matrix(
+                self.scalar_feature_matrix)
 
-        if self.method == 'standard':
+            if self.method == 'standard':
 
-            self.pairs = self.compare_graphs(self.similar_composition_tuples)
+                self.pairs = self.compare_graphs(
+                    self.similar_composition_tuples)
 
-        elif self.method == 'rmsd':
-            self.pairs = RemoveDuplicates.compare_rmsd(
-                tupellist=self.similar_composition_tuples,
-                scalar_feature_df=self.scalar_feature_matrix,
-                try_supercell=self.try_supercell,
-                reduced_structure_dict=self.reduced_structure_dict)
+            elif self.method == 'rmsd':
+                self.pairs = RemoveDuplicates.compare_rmsd(
+                    tupellist=self.similar_composition_tuples,
+                    scalar_feature_df=self.scalar_feature_matrix,
+                    try_supercell=self.try_supercell,
+                    reduced_structure_dict=self.reduced_structure_dict)
 
-        elif self.method == 'rmsd_graph':
-            self.rmsd_pairs = RemoveDuplicates.compare_rmsd(
-                tupellist=self.similar_composition_tuples,
-                scalar_feature_df=self.scalar_feature_matrix,
-                try_supercell=self.try_supercell,
-                reduced_structure_dict=self.reduced_structure_dict)
+            elif self.method == 'rmsd_graph':
+                self.rmsd_pairs = RemoveDuplicates.compare_rmsd(
+                    tupellist=self.similar_composition_tuples,
+                    scalar_feature_df=self.scalar_feature_matrix,
+                    try_supercell=self.try_supercell,
+                    reduced_structure_dict=self.reduced_structure_dict)
 
-            self.pairs = self.compare_graphs(self.rmsd_pairs)
+                self.pairs = self.compare_graphs(self.rmsd_pairs)
 
-        elif self.method == 'hash':
-            raise NotImplementedError
-            # RemoveDuplicates.get_graph_hash_dict(self.structure_list)
+            elif self.method == 'hash':
+                raise NotImplementedError
+                # RemoveDuplicates.get_graph_hash_dict(self.structure_list)
+        finally:
+            if self.tempdirpath and os.path.exists(self.tempdirpath):
+                logger.debug('now i am cleaning up')
+                shutil.rmtree(self.tempdirpath)
 
     @staticmethod
     def get_rmsd_matrix():

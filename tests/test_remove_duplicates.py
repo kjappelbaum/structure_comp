@@ -116,7 +116,7 @@ def test_supercells():
     structure_list = get_structure_list(
         os.path.join(THIS_DIR, 'structures_supercells'))
 
-    #rd_object_1 = RemoveDuplicates(
+   # rd_object_1 = RemoveDuplicates(
     #    structure_list, cached=True, method='rmsd')
     rd_object_2 = RemoveDuplicates(
         structure_list, cached=False, method='rmsd')
