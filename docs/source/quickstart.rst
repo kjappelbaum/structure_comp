@@ -10,12 +10,13 @@ Getting Statistics
 ------------------
 
 
+
 Sampling
 --------
-The sampler object works on dataframes, since this interfaces smoothly with `matminer
-<https://github.com/hackingmaterials/matminer>`_.
+The sampler object works on dataframes, since this interfaces smoothly with featurization packages like
+`matminer <https://github.com/hackingmaterials/matminer>`_.
 So far, a greedy and a clustering-based farthest point
-sampling has been implemented.
+sampling have been implemented.
 
 To start sampling you have to initialize a sampler object with dataframe, columns, the name of the identifier column
 and the number of samples you want to have:

@@ -73,6 +73,25 @@ Hashing
 
 Statistics
 ----------
+The statistics module (:code:`comparators.py`) implements three different classes that allow to
+
+* measure the structural diversity of one database (:code:`DistStatistic`)
+* compare two databases (:code:`DistComparison`)
+* compare one sample with a database (:code:`DistExample`)
+
+The :code:`DistStatistic` class implements parallelized versions of random (with resampling)
+RMSD and structure graph comparisons within a database whereas the :code:`DistComparison` class
+also implements those but also several statistical tests like:
+
+* maximum mean discrepancy
+* Anderson-Darling
+* Kolmogorov-Smirnov
+* Mutual information
+
+that work on a list of list or dataframe of features.
+
+The :code:`DistExample` class clusters the database (e.g. based on same property space) and then
+compares the sample to the :math:`k` samples closest to the centroids.
 
 
 Sampling

@@ -55,6 +55,7 @@ class Cleaner():
     def rewrite_cif(path: str,
                     outdir: str,
                     remove_disorder: bool = True,
+                    p1: bool = False,
                     clean_symmetry: float = None) -> str:
         """
         Reads cif file and keeps only the relevant parts defined in RELEVANT_KEYS.
@@ -63,6 +64,7 @@ class Cleaner():
             path (str): Path to input file
             outdir (str): Path to output directory
             remove_disorder (bool): If True (default), then disorder groups other than 1 and . are removed.
+            p1 (bool): If True, then we will set the symmetry to P1.
             clean_symmetry (float): uses spglib to symmetrize the structure with the specified tolerance, set to None
                 if you do not want to use it
 
@@ -78,6 +80,15 @@ class Cleaner():
             '_cell_length_a',
             '_cell_length_b',
             '_cell_length_c',
+            '_atom_site_label',
+            '_atom_site_fract_x',
+            '_atom_site_fract_y',
+            '_atom_site_fract_z',
+            '_atom_site_charge',
+            '_atom_site_type_symbol',
+        ]
+
+        RELEVANT_KEYS_NON_P1 = [
             '_symmetry_cell_setting',
             '_space_group_crystal_system',
             '_space_group_name_hall',
@@ -88,14 +99,8 @@ class Cleaner():
             '_space_group_name_h-m_alt',
             '_symmetry_tnt_tables_number',
             '_symmetry_space_group_name_hall',
-            '_atom_site_label',
-            '_atom_site_fract_x',
-            '_atom_site_fract_y',
-            '_atom_site_fract_z',
-            '_atom_site_charge',
             '_symmetry_equiv_pos_as_xyz',
             '_space_group_symop_operation_xyz',
-            '_atom_site_type_symbol',
         ]
 
         LOOP_KEYS = [
@@ -174,11 +179,20 @@ class Cleaner():
                             image.AddItem(key, loop_fixed)
                             image.AddLoopName('_atom_site_type_symbol', key)
 
+            if not p1:
+                RELEVANT_KEYS += RELEVANT_KEYS_NON_P1
+
             for key in image.keys():
                 if key not in RELEVANT_KEYS:
                     image.RemoveItem(key)
 
             image['_atom_site_label'] = image['_atom_site_type_symbol']
+
+            if p1:
+                image.AddItem('_symmetry_space_group_name_H-M', 'P 1')
+                image.ChangeItemOrder('_symmetry_space_group_name_h-m', -1)
+                image.AddItem('_space_group_name_Hall', 'P 1')
+                image.ChangeItemOrder('_space_group_name_Hall', -1)
 
             # remove uncertainty brackets
             for key in NUMERIC_LOOP_KEYS:
