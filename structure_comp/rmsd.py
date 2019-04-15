@@ -259,7 +259,11 @@ def centroid(X):
     return C
 
 
-def parse_periodic_case(file_1, file_2, try_supercell: bool=True, pymatgen:bool=False, get_reduced_structure:bool=True):
+def parse_periodic_case(file_1,
+                        file_2,
+                        try_supercell: bool = True,
+                        pymatgen: bool = False,
+                        get_reduced_structure: bool = True):
     """
     Parser for periodic structures, handles two possible cases:
         (1) Structures are supercells (within tolerance), then one cell is multiplied by the scaling factors

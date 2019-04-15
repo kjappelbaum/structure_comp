@@ -276,10 +276,10 @@ class DistComparison():
     """
 
     def __init__(self,
-                 structure_list_1: list = [],
-                 structure_list_2: list = [],
-                 property_list_1: [list, pd.DataFrame] = [],
-                 property_list_2: [list, pd.DataFrame] = []):
+                 structure_list_1: list = None,
+                 structure_list_2: list = None,
+                 property_list_1: [list, pd.DataFrame] =None,
+                 property_list_2: [list, pd.DataFrame] =None):
         """
 
         Args:
