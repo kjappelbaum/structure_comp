@@ -19,6 +19,8 @@ from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
 from pymatgen.io.ase import AseAtomsAdaptor
 from scipy.spatial.distance import pdist, squareform
+from scipy.spatial import KDTree
+from scipy.sparse import find
 import tempfile
 import logging
 from ase.visualize.plot import plot_atoms
@@ -247,15 +249,14 @@ class RemoveDuplicates():
             list of tuples which Euclidean distance is under threshold
 
         """
-        distances = pdist(
-            scalar_feature_df.drop(columns=['name']).values,
-            metric='euclidean')
-        dist_matrix = squareform(distances)
-        np.fill_diagonal(dist_matrix, 1)
-        i, j = np.where(dist_matrix < threshold)
-        duplicates = list(set(map(tuple, map(sorted, list(zip(i, j))))))
 
-        logger.debug('found {} and {} composition duplicates'.format(i, j))
+        kdtree = KDTree(scalar_feature_df.drop(columns=['name']).values)
+        d = kdtree.sparse_distance_matrix(kdtree, max_distance=threshold)
+        non_zero = find(d)
+
+        duplicates = list(set(map(tuple, map(sorted, list(zip(non_zero[0], non_zero[1]))))))
+
+        logger.debug('found {} and {} composition duplicates'.format(non_zero[0], non_zero[1]))
         return duplicates
 
     @staticmethod
