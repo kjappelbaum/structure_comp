@@ -172,6 +172,9 @@ class DistStatistic(Statistics):
     def __init__(self, structure_list):
         self.structure_list = structure_list
 
+    def __repr__(self):
+        return 'DistStatistic'
+
     @classmethod
     def from_folder(cls, folder: str, extension: str = 'cif'):
         """
@@ -316,6 +319,13 @@ class DistComparison():
                     )
                 else:
                     self.list_of_list_mode = False
+
+    def __repr__(self):
+        return 'DistComparison'
+
+    def __len__(self):
+        return len(self.structure_list_1) + len(self.structure_list_2) + len(
+            self.property_list_1) + len(self.property_list_2)
 
     @classmethod
     def from_folders(cls,
@@ -699,6 +709,12 @@ class DistExampleComparison():
     def __init__(self, structure_list, file):
         self.structure_list = structure_list
         self.file = file
+
+    def __len__(self):
+        return len(self.structure_list)
+
+    def __repr__(self):
+        return f'DistExampleComparison with file {self.file}'
 
     @classmethod
     def from_folder_and_file(class_object, folder, file, extension='cif'):

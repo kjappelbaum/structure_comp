@@ -37,6 +37,12 @@ class Cleaner():
         self.outdir = outdir
         self.rewritten_paths = []
 
+    def __repr__(self):
+        return f'Cleaner with outdir {self.outdir}'
+
+    def __len__(self):
+        return len(self.structure_list)
+
     @classmethod
     def from_folder(cls, folder, outdir: str):
         """
