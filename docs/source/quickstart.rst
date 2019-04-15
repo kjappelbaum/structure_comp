@@ -18,6 +18,17 @@ To get the duplicates in a directory with structures, you can run something like
 The filenames and the number of duplicates are saved as attributes of the :code:`RemoveDuplicates`
 object.
 
+.. warning::
+
+    Large databases (e.g. CCSD MOF subset) can require a large a amount of temporary hard drive ("swap")
+    space which we use to store the Niggli reduced structures. As the main routine
+    runs in a contextmanager, the temporary files will be deleted even if the program runs into an
+    error. If you use :code:`cached=True` we will not write temporary files but keep everything in memory.
+    This is of course not feasible for large database. 
+
+    We already use KDTrees and spare matrices where possible to reduce the
+    memory requirements.
+
 
 Getting Statistics
 ------------------
