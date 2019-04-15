@@ -88,6 +88,9 @@ also implements those but also several statistical tests like:
 
 that work on a list of list or dataframe of features.
 
+The main :code:`Statistics` class also implements further statistical metrics, such as
+measures of central tendency like the trimean which are not that commonly used (unfortunately).
+
 The :code:`DistExample` class clusters the database (e.g. based on same property space) and then
 compares the sample to the :math:`k` samples closest to the centroids.
 

@@ -167,36 +167,37 @@ class Statistics():
 
         return rmsds
 
-        @staticmethod
-        def trimean(data):
-            q1 = np.quantile(data, 0.25)
-            q3 = np.quantile(data, 0.75)
-            return (q1 + 2 * np.median(data) + q3) / 4
+    @staticmethod
+    def trimean(data):
+        q1 = np.quantile(data, 0.25)
+        q3 = np.quantile(data, 0.75)
+        return (q1 + 2 * np.median(data) + q3) / 4
 
-        @staticmethod
-        def interquartile_mean(data):
-            q1 = np.quantile(data, 0.25)
-            q3 = np.quantile(data, 0.75)
-            sorted_data = np.sort(data)
-            trimmed_data = sorted_data[(sorted_data >= q1) & (sorted_data <= q3)]
-            return np.mean(trimmed_data)
+    @staticmethod
+    def interquartile_mean(data):
+        q1 = np.quantile(data, 0.25)
+        q3 = np.quantile(data, 0.75)
+        sorted_data = np.sort(data)
+        trimmed_data = sorted_data[(sorted_data >= q1) & (sorted_data <= q3)]
+        return np.mean(trimmed_data)
 
-        @staticmethod
-        def midhinge(data):
-            q1 = np.quantile(data, 0.25)
-            q3 = np.quantile(data, 0.75)
-            return np.mean([q1, q3])
+    @staticmethod
+    def midhinge(data):
+        q1 = np.quantile(data, 0.25)
+        q3 = np.quantile(data, 0.75)
+        return np.mean([q1, q3])
 
-        @staticmethod
-        def val_range(data):
-            max_val = np.max(data)
-            min_val = np.min(data)
-            return abs(max_val - min_val)
+    @staticmethod
+    def val_range(data):
+        max_val = np.max(data)
+        min_val = np.min(data)
+        return abs(max_val - min_val)
 
-        @staticmethod
-        def mid_range(data):
-            return (np.max(data) + np.min(data)) / 2
-        
+    @staticmethod
+    def mid_range(data):
+        return (np.max(data) + np.min(data)) / 2
+
+
 class DistStatistic(Statistics):
     def __init__(self, structure_list):
         self.structure_list = structure_list
