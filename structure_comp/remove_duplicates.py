@@ -11,17 +11,13 @@ __status__ = 'First Draft, Testing'
 import os
 from pathlib import Path
 from contextlib import contextmanager
-import numpy as np
 import shutil
 from pymatgen import Structure
 import concurrent.futures
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
 from pymatgen.io.ase import AseAtomsAdaptor
-from scipy.spatial.distance import pdist, squareform
 from scipy.spatial import cKDTree
-from scipy.sparse import find
-import itertools
 import tempfile
 import logging
 from ase.visualize.plot import plot_atoms
@@ -39,6 +35,7 @@ logger.setLevel(logging.DEBUG)
 
 # ToDo: add XTalComp support
 # ToDo: more useful error message when file cannot be read
+
 
 class RemoveDuplicates():
     """
