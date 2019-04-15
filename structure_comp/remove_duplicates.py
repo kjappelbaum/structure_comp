@@ -19,8 +19,9 @@ from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
 from pymatgen.io.ase import AseAtomsAdaptor
 from scipy.spatial.distance import pdist, squareform
-from scipy.spatial import KDTree
+from scipy.spatial import cKDTree
 from scipy.sparse import find
+import itertools
 import tempfile
 import logging
 from ase.visualize.plot import plot_atoms
@@ -237,7 +238,7 @@ class RemoveDuplicates():
 
     @staticmethod
     def get_scalar_distance_matrix(scalar_feature_df: pd.DataFrame,
-                                   threshold: float = 0.001) -> list:
+                                   threshold: float = 0.01) -> list:
         """
         Get structures that probably have the same composition.
 
@@ -249,14 +250,25 @@ class RemoveDuplicates():
             list of tuples which Euclidean distance is under threshold
 
         """
+        x = scalar_feature_df.drop(columns=['name']).values
 
-        kdtree = KDTree(scalar_feature_df.drop(columns=['name']).values)
-        d = kdtree.sparse_distance_matrix(kdtree, max_distance=threshold)
-        non_zero = find(d)
+        tree = cKDTree(x)
+        groups = tree.query_ball_point(x, threshold)
 
-        duplicates = list(set(map(tuple, map(sorted, list(zip(non_zero[0], non_zero[1]))))))
+        groups = [g for g in groups if len(g) >= 2]
 
-        logger.debug('found {} and {} composition duplicates'.format(non_zero[0], non_zero[1]))
+        duplicates = []
+        for g in groups:
+            if len(g) > 2:
+                for _, index in enumerate(g, start=1):
+                    duplicates.append(tuple(g[0], index))
+            else:
+                duplicates.append(tuple(g))
+
+        duplicates = list(set(map(tuple, map(sorted, duplicates))))
+
+        logger.debug('found {} composition duplicates'.format(duplicates))
+
         return duplicates
 
     @staticmethod

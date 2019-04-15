@@ -94,7 +94,7 @@ def test_structure_folder_3():
     rd_object_4 = RemoveDuplicates(structure_list, cached=False, method='rmsd')
 
     rd_object_1.run_filtering()
-    assert rd_object_1.number_of_duplicates == 1
+    assert rd_object_1.number_f_duplicates == 1
     rd_object_2.run_filtering()
     assert rd_object_2.number_of_duplicates == 1
 

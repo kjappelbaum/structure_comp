@@ -11,6 +11,7 @@ __status__ = 'First Draft, Testing'
 from glob import glob
 import os
 import re
+from numba import jit
 import unicodedata
 from collections import defaultdict  # thanks Raymond Hettinger!
 import functools
@@ -70,6 +71,7 @@ def get_number_bins(array):
     return int((max(array) - min(array)) / h)
 
 
+@jit
 def kl_divergence(array_1, array_2, bins=None):
     """
     KL divergence could be used a measure of covariate shift.
@@ -188,6 +190,7 @@ def slugify(value, allow_unicode=False):
     return re.sub(r'[-\s]+', '-', value)
 
 
+@jit
 def incremental_farthest_search(points, k):
     """
     Source: https://flothesof.github.io/farthest-neighbors.html
