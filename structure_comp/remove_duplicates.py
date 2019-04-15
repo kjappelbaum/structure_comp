@@ -36,15 +36,12 @@ logger.setLevel(logging.DEBUG)
 
 # ToDo: add XTalComp support
 # ToDo: more useful error message when file cannot be read
-# ToDo: run it in a contextmanager?
-
 
 class RemoveDuplicates():
     """
     A RemoveDuplicates object operates on a collection of structure and allows
         - Removal of duplicates on the collection of structures using different methods, using the main
         function run_filtering()
-
         - Basic comparisons between different RemoveDuplicates objects (e.g. comparing which one contains more duplicates)
     """
 

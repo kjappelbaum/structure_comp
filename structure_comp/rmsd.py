@@ -272,10 +272,12 @@ def parse_periodic_case(file_1, file_2, try_supercell: bool=True, pymatgen:bool=
         file_2 (str/pymatgen structure object): path to second file, pymatgen structure object in case pymatgen=True
         try_supercell (bool): if true, we attempt to build a supercell, default: True
         pymatgen (bool): if true, then file_1 and file_2 take pymatgen structure objects
-        get_reduced_structure (bool): if true (default) it gets the niggli reduced cell.
+        get_reduced_structure (bool): if true (default) it gets the Niggli reduced cell.
+
     Returns:
         atomic symbols (list), cartesian positions (list) of structure 1,
         atomic symbols (list), cartesian positions (list) of structure 2
+
     """
 
     if pymatgen:

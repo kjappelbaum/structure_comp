@@ -5,7 +5,7 @@ tags:
   - materials science 
 authors:
   - name: Kevin M. Jablonka
-    affiliation: 1, 2
+    affiliation: 1
   - name: Daniele Ongari
     affiliation: 1
     orcid: 0000-0001-6197-2901

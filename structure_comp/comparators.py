@@ -360,6 +360,7 @@ class DistComparison():
                                       iterations: int = 5000) -> list:
         """
         Returns iterations times the Euclidean distance between two randomly chosen structures
+
         Args:
             feature (str): property that is used for the structure comparisons, available options are
                 density, num_sites, volume. Default is density.
@@ -368,6 +369,7 @@ class DistComparison():
 
         Returns:
             list of property distances
+
         """
         distances = self._randomized_structure_property(
             self.structure_list_1, self.structure_list_2, feature, iterations)
@@ -377,12 +379,15 @@ class DistComparison():
     def randomized_rmsd(self, iterations: int = 5000) -> list:
         """
         Returns iterations times the Kabsch RMSD between two randomly chosen structures
+
         Args:
             iterations (int): number of comparisons (sampling works with replacement, i.e. the same pair might
                   be sampled several times).
 
+
         Returns:
             list of Kabsch RMSDs
+
         """
         distances = self._randomized_rmsd(self.structure_list_1,
                                           self.structure_list_2, iterations)
@@ -467,7 +472,6 @@ class DistComparison():
             r2
             pearson_correlation_coefficient
             pearson_p_value
-
 
         """
         if self.list_of_list_mode:
