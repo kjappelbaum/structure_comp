@@ -28,9 +28,13 @@ Besides the python standard library, we make use of the following open-source li
 *   [numba](https://github.com/numba/numba)
 *   [PyCifRW](https://pypi.org/project/PyCifRW/)
 *   [matplotlib](https://matplotlib.org/)
+*   [pytest](https://docs.pytest.org/en/latest/)
+*   [sphinx](http://www.sphinx-doc.org/en/stable/) with the
+    [napoleon](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/index.html) 
+    and [bibtex](https://github.com/mcmtroffaes/sphinxcontrib-bibtex) extensions
 
 Several of the libraries are supported by [NumFocus](https://numfocus.org/). If you love these tools and want to support
-open code and the development of these packages, you might consider a donation to NumFocus. 
+open code, open science and the development of these packages, you might consider a donation to NumFocus. 
 
 If we use code-snippets from the internet, we acknowledge this in the docstring of the function. 
 
