@@ -14,7 +14,7 @@ Measuring the diversity of a dataset
 
 If you have properties -- great, use those! With you don't have any,
 calculate some using some package like zeo++ or matminer.
-If you really want to compare structures, you can use the `DistStatistic` class. Using the
+If you really want to compare structures, you can use the :code:`DistStatistic` class. Using the
 randomized RMSD is decently quick, constructing structure graphs can take some time and probably
 does not lead to more insight:
 
@@ -38,7 +38,7 @@ Comparing two property distributions
 ````````````````````````````````````
 
 If you have two dataframes of properties and you want to find out if they come from the same
-distribution the `DistComparison` class is the one you might want to use.
+distribution the :code:`DistComparison` class is the one you might want to use.
 
 Under the hood, it runs different statistical tests feature by feature and some also over the complete
 dataset and then returns a dictionary with the test statistics.
