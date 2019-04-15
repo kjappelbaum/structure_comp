@@ -24,7 +24,7 @@ object.
     space which we use to store the Niggli reduced structures. As the main routine
     runs in a contextmanager, the temporary files will be deleted even if the program runs into an
     error. If you use :code:`cached=True` we will not write temporary files but keep everything in memory.
-    This is of course not feasible for large database. 
+    This is of course not feasible for large database.
 
     We already use KDTrees and spare matrices where possible to reduce the
     memory requirements.

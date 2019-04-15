@@ -23,8 +23,8 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'structure_comp'
-copyright = '2019, Kevin M. Jablonka, Daniele Ongari, Berend Smit'
-author = 'Kevin M. Jablonka, Daniele Ongari, Berend Smit'
+copyright = '2019, Kevin M. Jablonka, Daniele Ongari and Berend Smit'
+author = 'Kevin M. Jablonka, Daniele Ongari and Berend Smit'
 
 # The short X.Y version
 version = '0.1'
