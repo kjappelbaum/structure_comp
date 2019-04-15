@@ -16,7 +16,7 @@ import os
 import sys
 autodoc_mock_imports = [
     'numpy', 'pymatgen', 'ase', 'tqdm', 'pandas', 'scipy', 'scikit-learn',
-    'numba', 'PyCifRW'
+    'numba', 'PyCifRW', 'networkx', 'matplotlib'
 ]
 sys.path.insert(0, os.path.abspath('../..'))
 
