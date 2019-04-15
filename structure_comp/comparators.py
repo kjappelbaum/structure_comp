@@ -199,8 +199,32 @@ class Statistics():
 
 
 class DistStatistic(Statistics):
-    def __init__(self, structure_list):
+    def __init__(self, structure_list=None, property_list=None):
         self.structure_list = structure_list
+        self.property_list = property_list
+        self.feature_names = None
+
+        if isinstance(property_list, pd.DataFrame):
+            logger.debug('Input seems to be a dataframe')
+            self.list_of_list_mode = True
+            self.feature_names = self.property_list.columns.values
+            logger.debug('will use %s as feature names', self.feature_names)
+            _tmp_property_list = []
+
+            for feature in self.feature_names:
+                _tmp_property_list.append(
+                    self.property_list[feature].values.tolist())
+            self.property_list = _tmp_property_list
+
+        else:
+            if all(isinstance(i, list) for i in property_list):
+                self.list_of_list_mode = True
+                self.feature_names = [
+                    '_'.join(['feature', i])
+                    for i in range(len(self.property_list))
+                ]
+            else:
+                self.list_of_list_mode = False
 
     def __repr__(self):
         return 'DistStatistic'
@@ -278,8 +302,8 @@ class DistComparison():
     def __init__(self,
                  structure_list_1: list = None,
                  structure_list_2: list = None,
-                 property_list_1: [list, pd.DataFrame] =None,
-                 property_list_2: [list, pd.DataFrame] =None):
+                 property_list_1: [list, pd.DataFrame] = None,
+                 property_list_2: [list, pd.DataFrame] = None):
         """
 
         Args:
