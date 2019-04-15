@@ -57,8 +57,6 @@ it is often used in visualizations to e.g. align structures. The basic idea behi
    which can be implemented using a SVD decomposition.
 
 
-
-
 The implementation in this package is based on the rmsd package from Jimmy Charnley Kromann :cite:`kromann_calculate_2019`, we just added routines for
 periodic cases.
 
@@ -137,8 +135,12 @@ in the accompanying paper :cite:`chung_computation-ready_2014` and the group aro
 and a pre-defined list of solvents to remove unbound solvents :cite:`moghadam_development_2017`.
 
 Unfortunately, to our knowledge, there exist no open-source tools at try to address all of
-the three issues mentioned above. We are well aware of the problems of automatic structure sanitation tools :cite:`zarabadi-poor_comment_2019`.
-and also advise to use them with care and to report issues such that we can improve the tools.
+the three issues mentioned above.
+
+.. warning::
+
+    We are well aware of the problems of automatic structure sanitation tools :cite:`zarabadi-poor_comment_2019`.
+    and also advise to use them with care and to report issues such that we can improve the tools.
 
 
 Rewriting the :code:`cif` files
@@ -164,6 +166,9 @@ from the structure.
 
 Removing disorder
 .................
-Please note that this method is experimental and does not work in all cases.
+
+.. warning::
+
+    Please note that this module is experimental and does not work in all cases.
 
 

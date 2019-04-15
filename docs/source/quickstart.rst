@@ -4,6 +4,19 @@ Quickstart Guide
 
 Removing Duplicates
 -------------------
+To get the duplicates in a directory with structures, you can run something like
+
+::
+
+    from structure_comp.remove_duplicates import RemoveDuplicates
+
+    rd_rmsd_graph = RemoveDuplicates.from_folder(
+        '/home/kevin/structure_source/csd_mofs_rewritten/', method='rmsd_graph')
+
+    rd_rmsd_graph.run_filtering()
+
+The filenames and the number of duplicates are saved as attributes of the :code:`RemoveDuplicates`
+object.
 
 
 Getting Statistics
@@ -93,4 +106,43 @@ If you work in a Jupyter Notebook, don't forget to call
 
     %matplotlib inline
 
+
+
+Cleaning Structures
+--------------------
+
+Rewriting a :code:`.cif` file
+``````````````````````````````
+Most commonly we use the following function call to "clean" a :code:`.cif` file
+
+::
+
+    from structure_comp.cleaner import Cleaner
+
+    cleaner_object = Cleaner.from_folder('/home/kevin/structure_source/csd_mofs/', '/home/kevin/structure_source/csd_mofs_rewritten')
+    cleaner_object.rewrite_all_cifs()
+
+You will find a new directory with structures that:
+
+* have "safe" filenames
+* have no experimental details in the :code:`cif` files
+* are set to P1 symmetry
+* have a :code:`_atom_site_label` column that is equal to :code:`_atom_site_type_symbol` which we found to work well
+  with RASPA
+* by default, we will also remove all disorder groups except :code:`.` and :code:`*`
+
+If you input files have a :code:`_atom_site_charge` column, you wil also
+find it in the output file.
+
+.. note::
+
+    You also have the option to symmetrization routines by setting
+    :code:`clean_symmetry` to a float which is the tolerance for the symmetrization step.
+
+Removing unbound solvent
+````````````````````````
+.. warning::
+
+    Note that this routine is slow for large structures as it has to construct the
+    structure graph.
 
