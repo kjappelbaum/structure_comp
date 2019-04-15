@@ -9,6 +9,50 @@ Removing Duplicates
 Getting Statistics
 ------------------
 
+Measuring the diversity of a dataset
+`````````````````````````````````````
+
+If you have properties -- great, use those! With you don't have any,
+calculate some using some package like zeo++ or matminer.
+If you really want to compare structures, you can use the `DistStatistic` class. Using the
+randomized RMSD is decently quick, constructing structure graphs can take some time and probably
+does not lead to more insight:
+
+::
+
+    from structure_comp.comparators import DistStatistic
+    core_cof_path = '/home/kevin/structure_source/Core_Cof/'
+
+    # core cof statistics
+    core_cof_statistics = DistStatistic.from_folder(core_cof_path, extension='cif')
+    randomized_rmsd_cc = core_cof_statistics.randomized_rmsd()
+    randomized_jaccard_cc = core_cof_statistics.randomized_graphs(iterations=100)
+
+Then, it might be interesting to plot the resulting list as e.g. a violinplot to see whether
+the distribution is uniform (which would be surprising) or which RMSDs are most common as well as
+(what is probably most interesting) what is the width of the distribution. A example is shown in
+the Figure below.
+
+
+Comparing two property distributions
+````````````````````````````````````
+
+If you have two dataframes of properties and you want to find out if they come from the same
+distribution the `DistComparison` class is the one you might want to use.
+
+Under the hood, it runs different statistical tests feature by feature and some also over the complete
+dataset and then returns a dictionary with the test statistics.
+
+
+Finding out if a structure is different from a distribution
+````````````````````````````````````````````````````````````
+
+In this case you have the following possibilities:
+
+* you can do a property-based comparison
+* you can do a structure based comparison, guided by properties
+* you can do a random structure based comparison
+
 
 
 Sampling

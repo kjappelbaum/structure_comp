@@ -12,7 +12,7 @@ easy-to-use tools to:
 * remove structural duplicates from structural databases (useful for high-throughput studies)
 * compare structures and distributions across feature and structure space (useful for machine learning)
 * sample from structural database
-
+* clean structures
 
 .. toctree::
    :maxdepth: 2
@@ -27,6 +27,5 @@ easy-to-use tools to:
 Indices and tables
 ==================
 
-* :ref:`genindex`
 * :ref:`modindex`
 
