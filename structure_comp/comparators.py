@@ -272,27 +272,29 @@ class DistStatistic(Statistics):
         self.feature_names = None
         self.properties_statistics = {}
 
-        if isinstance(property_list, pd.DataFrame):
-            logger.debug('Input seems to be a dataframe')
-            self.list_of_list_mode = True
-            self.feature_names = self.property_list.columns.values
-            logger.debug('will use %s as feature names', self.feature_names)
-            _tmp_property_list = []
-
-            for feature in self.feature_names:
-                _tmp_property_list.append(
-                    self.property_list[feature].values.tolist())
-            self.property_list = _tmp_property_list
-
-        else:
-            if all(isinstance(i, list) for i in property_list):
+        if property_list:
+            if isinstance(property_list, pd.DataFrame):
+                logger.debug('Input seems to be a dataframe')
                 self.list_of_list_mode = True
-                self.feature_names = [
-                    '_'.join(['feature', i])
-                    for i in range(len(self.property_list))
-                ]
+                self.feature_names = self.property_list.columns.values
+                logger.debug('will use %s as feature names',
+                             self.feature_names)
+                _tmp_property_list = []
+
+                for feature in self.feature_names:
+                    _tmp_property_list.append(
+                        self.property_list[feature].values.tolist())
+                self.property_list = _tmp_property_list
+
             else:
-                self.list_of_list_mode = False
+                if all(isinstance(i, list) for i in property_list):
+                    self.list_of_list_mode = True
+                    self.feature_names = [
+                        '_'.join(['feature', i])
+                        for i in range(len(self.property_list))
+                    ]
+                else:
+                    self.list_of_list_mode = False
 
     def __repr__(self):
         return 'DistStatistic'
@@ -466,56 +468,60 @@ class DistComparison():
         self.jaccards = None
         self.random_structure_property = {}
 
-        if not isinstance(self.property_list_1, type(self.property_list_2)):
-            raise ValueError('The two property inputs must be of same type')
+        if property_list_1 and property_list_2:
+            if not isinstance(self.property_list_1, type(
+                    self.property_list_2)):
+                raise ValueError(
+                    'The two property inputs must be of same type')
 
-        # Check if input is a dataframe. If this is the case, extract the column names
-        # and convert it to list of lists
-        if isinstance(property_list_1, pd.DataFrame):
-            logger.debug('Input seems to be a dataframe')
-            self.list_of_list_mode = True
-            self.feature_names = self.property_list_1.columns.values
-            logger.debug('will use %s as feature names', self.feature_names)
-            _tmp_property_list_1 = []
+            # Check if input is a dataframe. If this is the case, extract the column names
+            # and convert it to list of lists
+            if isinstance(property_list_1, pd.DataFrame):
+                logger.debug('Input seems to be a dataframe')
+                self.list_of_list_mode = True
+                self.feature_names = self.property_list_1.columns.values
+                logger.debug('will use %s as feature names',
+                             self.feature_names)
+                _tmp_property_list_1 = []
 
-            for feature in self.feature_names:
-                _tmp_property_list_1.append(
-                    self.property_list_1[feature].values.tolist())
-            self.property_list_1 = _tmp_property_list_1
+                for feature in self.feature_names:
+                    _tmp_property_list_1.append(
+                        self.property_list_1[feature].values.tolist())
+                self.property_list_1 = _tmp_property_list_1
 
-            _tmp_property_list_2 = []
-            for feature in self.feature_names:
-                _tmp_property_list_2.append(
-                    self.property_list_2[feature].values.tolist())
-            self.property_list_2 = _tmp_property_list_2
+                _tmp_property_list_2 = []
+                for feature in self.feature_names:
+                    _tmp_property_list_2.append(
+                        self.property_list_2[feature].values.tolist())
+                self.property_list_2 = _tmp_property_list_2
 
-            assert len(self.property_list_1) == len(self.feature_names)
-            assert len(self.property_list_2) == len(self.feature_names)
+                assert len(self.property_list_1) == len(self.feature_names)
+                assert len(self.property_list_2) == len(self.feature_names)
 
-        else:
-            # Check if the input is a list of list (i.e. multiple feature columns)
-            # if this is the case, we have to iterate over the lists to compute the test statistics
-            if all(isinstance(i, list) for i in property_list_1):
-                if all(isinstance(i, list) for i in property_list_2):
-                    self.list_of_list_mode = True
-                    self.feature_names = [
-                        '_'.join(['feature', i])
-                        for i in range(len(self.property_list_1))
-                    ]
-                else:
-                    logger.error(
-                        'One input seems to be a list of list whereas the other one is not. '
-                        'The property lists must be both of the same type. Please check your inputs.'
-                    )
             else:
-                if all(isinstance(i, list) for i in property_list_2):
-                    logger.error(
-                        'One input seems to be a list of list whereas the other one is not. '
-                        'The property lists must be both of the same type. Please check your inputs.'
-                    )
+                # Check if the input is a list of list (i.e. multiple feature columns)
+                # if this is the case, we have to iterate over the lists to compute the test statistics
+                if all(isinstance(i, list) for i in property_list_1):
+                    if all(isinstance(i, list) for i in property_list_2):
+                        self.list_of_list_mode = True
+                        self.feature_names = [
+                            '_'.join(['feature', i])
+                            for i in range(len(self.property_list_1))
+                        ]
+                    else:
+                        logger.error(
+                            'One input seems to be a list of list whereas the other one is not. '
+                            'The property lists must be both of the same type. Please check your inputs.'
+                        )
                 else:
-                    self.feature_names.append('feature_0')
-                    self.list_of_list_mode = False
+                    if all(isinstance(i, list) for i in property_list_2):
+                        logger.error(
+                            'One input seems to be a list of list whereas the other one is not. '
+                            'The property lists must be both of the same type. Please check your inputs.'
+                        )
+                    else:
+                        self.feature_names.append('feature_0')
+                        self.list_of_list_mode = False
 
     def __repr__(self):
         return 'DistComparison'
@@ -633,7 +639,9 @@ class DistComparison():
         if plot:
             plt.scatter(quantiles1, quantiles2, label='qq')
             plt.plot([minval - minval * 0.1, maxval + maxval * 0.1],
-                     [minval - minval * 0.1, maxval + maxval * 0.1], '--k', label='diagonal')
+                     [minval - minval * 0.1, maxval + maxval * 0.1],
+                     '--k',
+                     label='diagonal')
             plt.plot(quantiles1, predictions, label='Huber Regression')
             plt.legend()
 
