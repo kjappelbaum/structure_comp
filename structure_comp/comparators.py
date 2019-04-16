@@ -514,6 +514,7 @@ class DistComparison():
                         'The property lists must be both of the same type. Please check your inputs.'
                     )
                 else:
+                    self.feature_names.append('feature_0')
                     self.list_of_list_mode = False
 
     def __repr__(self):
@@ -630,15 +631,16 @@ class DistComparison():
         pearson = pearsonr(quantiles1, quantiles2)
 
         if plot:
-            plt.scatter(quantiles1, quantiles2)
+            plt.scatter(quantiles1, quantiles2, label='qq')
             plt.plot([minval - minval * 0.1, maxval + maxval * 0.1],
-                     [minval - minval * 0.1, maxval + maxval * 0.1], '--k')
+                     [minval - minval * 0.1, maxval + maxval * 0.1], '--k', label='diagonal')
             plt.plot(quantiles1, predictions, label='Huber Regression')
             plt.legend()
 
         results_dict = {
             'mse': mse,
             'r2': r2,
+            'deviation_from_ideal_diagonal': 1 - hr.coef_[0],
             'pearson_correlation_coefficient': pearson[0],
             'pearson_p_value': pearson[1],
         }
@@ -689,8 +691,8 @@ class DistComparison():
             out_dict = {}
             results_dict = DistComparison._single_qq_test(
                 self.property_list_1, self.property_list_2, plot)
-            self.qq_statistics[self.feature_names] = results_dict
-            out_dict[self.feature_names] = results_dict
+            self.qq_statistics[self.feature_names[0]] = results_dict
+            out_dict[self.feature_names[0]] = results_dict
             return out_dict
 
     @staticmethod
