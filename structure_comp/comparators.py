@@ -642,7 +642,7 @@ class DistComparison():
                      [minval - minval * 0.1, maxval + maxval * 0.1],
                      '--k',
                      label='diagonal')
-            plt.plot(quantiles1, predictions, label='Huber Regression')
+            plt.plot(quantiles1, predictions, label='Huber regression')
             plt.legend()
 
         results_dict = {
@@ -714,13 +714,16 @@ class DistComparison():
         both are binned to the optimal number of bins for the shorter distribution.
 
         Args:
-            x:
-            y:
-            sigma_ratio:
-            normalized:
+            x: numeric data (1d array)
+            y: numerica data (1d array)
+            sigma_ratio (float): which fraction of the standard deviation is used for smoothening
+            normalized (bool): if true, result is normalized
 
         Returns:
-
+            mutal information score (float)
+            
+        ToDo:
+            - use instead of smaller standard deviation maybe joined one?
         """
         EPS = np.finfo(float).eps
         width_x = max(x) - min(x)

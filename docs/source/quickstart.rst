@@ -81,7 +81,7 @@ from the diagonal. If the distributions are identical, you should see something 
     :alt: QQ-plot for identical distributions
     :figclass: align-center
 
-    QQ-plot for the void fractions of the structures in the Core-COF datset.:cite:`tong_exploring_2017`.
+    QQ-plot for the void fractions of the structures in the Core-COF datset. :cite:`tong_exploring_2017`.
 
 Whereas, if the value of the property is consistently lower for one dataset, we would
 expect something like

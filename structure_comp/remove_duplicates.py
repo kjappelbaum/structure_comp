@@ -257,8 +257,8 @@ class RemoveDuplicates():
         duplicates = []
         for g in groups:
             if len(g) > 2:
-                for _, index in enumerate(g, start=1):
-                    duplicates.append(tuple(g[0], index))
+                for _, index in enumerate(g[1:]):
+                    duplicates.append(tuple((g[0], index)))
             else:
                 duplicates.append(tuple(g))
 
