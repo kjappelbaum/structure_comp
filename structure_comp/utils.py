@@ -67,11 +67,27 @@ def get_number_bins(array):
     Returns:
         number of bins
     """
-    h = 2 * stats.iqr(array) * len(array)**(-1.0 / 3.0)
-    return int((max(array) - min(array)) / h)
+
+    h = 2 * stats.iqr(array) * len(array) ** (-1.0 / 3.0)
+
+    nb = (max(array) - min(array) / h == np.infty)
+    if (nb == np.infty) or (nb == -np.infty):
+        if len(array) > 100:
+            number_bins = int(len(array) / 10)
+        else:
+            number_bins = len(array)
+    else:
+        number_bins = int(nb)
+
+    if number_bins == 0:
+        if len(array) > 100:
+            number_bins = int(len(array) / 10)
+        else:
+            number_bins = len(array)
+
+    return number_bins
 
 
-@jit
 def kl_divergence(array_1, array_2, bins=None):
     """
     KL divergence could be used a measure of covariate shift.

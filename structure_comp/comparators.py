@@ -695,14 +695,19 @@ class DistComparison():
             return out_dict
 
     @staticmethod
-    def _mutual_information_2d(x, y, sigma_ratio=0.1, normalized=False):
+    def _mutual_information_2d(x,
+                               y,
+                               sigma_ratio: float = 0.1,
+                               normalized: bool = False):
         """
         Taken from https://gist.github.com/GaelVaroquaux/ead9898bd3c973c40429
         Modified to automatically adjust bin width, if the distributions to not have the same width,
         both are binned to the optimal number of bins for the shorter distribution.
 
         Args:
+            x:
             y:
+            sigma_ratio:
             normalized:
 
         Returns:
@@ -715,19 +720,22 @@ class DistComparison():
         stdev_y = np.std(y)
 
         if width_x < width_y:
-            bin = get_number_bins(x)
+            binnum = get_number_bins(x)
         else:
-            bin = get_number_bins(y)
+            binnum = get_number_bins(y)
 
         if stdev_x < stdev_y:
             sigma = sigma_ratio * stdev_x
         else:
             sigma = sigma_ratio * stdev_y
 
-        bins = (bin, bin)
+        if len(x) > len(y):
+            y = random.sample(x, len(y))
+        elif len(y) > len(x):
+            y = random.sample(y, len(x))
 
         # make joint histogram
-        jh = np.histogram2d(x, y, bins=bins)[0]
+        jh = np.histogram2d(x, y, bins=binnum)[0]
 
         # smooth the jh with a gaussian filter of given sigma
         ndimage.gaussian_filter(jh, sigma=sigma, mode='constant', output=jh)
@@ -795,7 +803,23 @@ class DistComparison():
 
     @staticmethod
     def mmd_test(x, y):
-        rbf_width = DistComparison._optimal_kernel_width([x, y]) / 4.0
+        if x.shape[1] > 1:
+            if len(x) > len(y):
+                x_kernel = x[np.random.choice(
+                    range(len(x)), len(y), replace=False)]
+                y_kernel = y
+            else:
+                y_kernel = y[np.random.choice(
+                    range(len(y)), len(x), replace=False)]
+                x_kernel = x
+        else:
+            x_kernel = x
+            y_kernel = y
+
+        print(x_kernel.shape, y_kernel.shape)
+
+        rbf_width = DistComparison._optimal_kernel_width(
+            (x_kernel, y_kernel)) / 4.0
         mmd_array = DistComparison._mmd(x, y, rbf_width)
         n_samples = min([500, x.shape[0], y.shape[0]])
         null_dist = DistComparison._mmd_null(x, y, rbf_width, n_samples)
@@ -843,7 +867,8 @@ class DistComparison():
             'will be implemented in a further release')
 
         mmd, mmd_p = DistComparison.mmd_test(
-            property_list_1.reshape(-1, 1), property_list_2.reshape(-1, 1))
+            np.array(property_list_1).reshape(-1, 1),
+            np.array(property_list_2).reshape(-1, 1))
 
         # Mann-Whitney U
         mwu = mannwhitneyu(property_list_1, property_list_2)
@@ -896,8 +921,8 @@ class DistComparison():
                     out_dict[self.feature_names[i]] = results_dict
 
                 mmd, mmd_p = DistComparison.mmd_test(
-                    np.array(self.property_list_1),
-                    np.array(self.property_list_2))
+                    np.array(self.property_list_1).T,
+                    np.array(self.property_list_2).T)
                 overall_statistics = {
                     'mmd_statistic': mmd,
                     'mmd_p_value': mmd_p,
