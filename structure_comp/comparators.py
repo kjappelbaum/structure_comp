@@ -16,7 +16,7 @@ from sklearn.linear_model import HuberRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.metrics.pairwise import euclidean_distances
 from scipy.stats import pearsonr, ks_2samp, mannwhitneyu, ttest_ind, \
-    anderson_ksamp, gmean, hmean, kurtosis, mode, variation, skew, normaltest, kruskal
+    anderson_ksamp, gmean, kurtosis, mode, variation, skew, normaltest, kruskal
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
@@ -270,6 +270,7 @@ class DistStatistic(Statistics):
         self.structure_list = structure_list
         self.property_list = property_list
         self.feature_names = None
+        self.properties_statistics = {}
 
         if isinstance(property_list, pd.DataFrame):
             logger.debug('Input seems to be a dataframe')
@@ -386,9 +387,7 @@ class DistStatistic(Statistics):
             'maximum': np.max(property_list),
             'median': np.median(property_list),
             'stdev': np.std(property_list),
-            'variance': np.variance(property_list),
             'geometric_mean': gmean(property_list),
-            'harmonic_mean': hmean(property_list),
             'mean': np.mean(property_list),
             'interquartile_range': q3 - q1,
             'quartile_1': q1,
@@ -403,7 +402,7 @@ class DistStatistic(Statistics):
 
         return result_dict
 
-    def properties_statistic(self):
+    def properties_test_statistics(self):
         """
 
         Returns:

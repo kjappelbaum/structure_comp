@@ -86,12 +86,25 @@ def test_property_statistics(get_two_numeric_property_dataframes):
     df1 = get_two_numeric_property_dataframes[1]
 
     comparator = DistComparison(property_list_1=df0, property_list_2=df1)
-
     result_dict = comparator.properties_test()
-
     assert len(result_dict) == len(df0.columns) + 1 # it is one more because of global features
+
+    comparator = DistComparison(property_list_1=df0, property_list_2=df0)
+    result_dict = comparator.properties_test()
+    assert len(result_dict) == len(df0.columns) + 1  # it is one more because of global
 
     # for column in list(df0.columns.values) + ['global']:
     #     sub_dict = result_dict[column]
     #     for _, value in sub_dict.iterdict():
     #         assert
+
+
+def test_property_descriptive_statistics(get_two_numeric_property_dataframes):
+    df0 = get_two_numeric_property_dataframes[0]
+    df1 = get_two_numeric_property_dataframes[1]
+
+    describer = DistStatistic(property_list=df0)
+
+    result_dict = describer.properties_test_statistics()
+
+    assert len(result_dict) == len(df0.columns)
