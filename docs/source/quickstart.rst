@@ -108,6 +108,26 @@ In our results dictionary, we would find :code:`'deviation_from_ideal_diagonal':
 which indicates that the Huber regression is much steeper than the diagonal.
 
 
+Statistical tests
+*****************
+
+Besides the QQ-test/plot you can also choose to run a variety of statistical tests on the dataset.
+If you provide multiple feature columns, we will run the tests column-wise and some of them globally.
+
+A nice overview about some statistical tests can be found some `Jupyter notebooks
+by Eric Schles <https://github.com/EricSchles/datascience_book>`_.
+
+To run the statistical tests, you can use some code snippet like the following
+
+::
+
+    comparator = DistComparison(property_list_1=df0, property_list_2=df1)
+    result_dict = comparator.properties_test()
+
+where :code:`df0` and :code:`df1` are the two property dataframes (they need to have the same number
+and order of columns, if you provide a dataframe, we will use the column names as keys in the output dictionary).
+
+
 Finding out if a structure is different from a distribution
 ````````````````````````````````````````````````````````````
 
