@@ -1,14 +1,13 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-# Extract and modification of the relevatn RMSD functions of
+# Extract and modification of the relevant RMSD functions of
 # the RMSD package (https://github.com/charnley/rmsd), most of the code in this module is
 # directly copied from aforementioned repository
 
 import numpy as np
 from ase.io import read
 from ase.build import niggli_reduce
-from numba import jit
 from pymatgen.io.ase import AseAtomsAdaptor
 import logging
 logger = logging.getLogger()
@@ -42,7 +41,6 @@ def rmsd(V: np.array, W: np.array):
     return np.sqrt(np.mean((np.subtract(V, W))**2))
 
 
-@jit
 def kabsch_rmsd(P, Q, translate=False):
     """
     Rotate matrix P unto Q using Kabsch algorithm and calculate the RMSD.

@@ -31,4 +31,5 @@ If you want to contribute code, please follow a few little guidelines:
 
 * Use `Google-Style docstrings <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html>`_
 * Please write unittests.
-* I think that type annotations are quite useful, please try to use them as well.
+* I think that type annotations are quite useful (it is e.g. a lot easier to keep the type annotations
+  updated than the complete docstrings or documentation), please try to use them as well.

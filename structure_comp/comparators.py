@@ -37,7 +37,18 @@ class Statistics():
         pass
 
     @staticmethod
-    def _get_one_graph_comparison(structure_list_a, structure_list_b, _):
+    def _get_one_graph_comparison(structure_list_a: list,
+                                  structure_list_b: list, _) -> float:
+        """
+
+        Args:
+            structure_list_a (list): list of paths to structures
+            structure_list_b (list): list of paths to structures
+            _:
+
+        Returns:
+            Jaccard distance between two random structure graphs
+        """
         random_selection_1 = random.sample(structure_list_a, 1)[0]
         random_selection_2 = random.sample(structure_list_b, 1)[0]
         crystal_a = Structure.from_file(random_selection_1)
@@ -84,8 +95,23 @@ class Statistics():
         return diffs
 
     @staticmethod
-    def _get_one_randomized_structure_property(structure_list_a,
-                                               structure_list_b, feature, _):
+    def _get_one_randomized_structure_property(structure_list_a: list,
+                                               structure_list_b: list,
+                                               feature: str, _) -> float:
+        """
+        Returns difference between the selected property for two random structures.
+
+        Args:
+            structure_list_a (list): list of paths (str) to structures
+            structure_list_b (list): list of paths (str) to structures
+            feature (str): feature that shall be compared, available are 'density', 'num_sites'
+                and 'volume
+            _:
+
+        Returns:
+            difference of feature for two randomly selected structures
+            
+        """
         random_selection_1 = random.sample(structure_list_a, 1)[0]
         random_selection_2 = random.sample(structure_list_b, 1)[0]
         crystal_a = Structure.from_file(random_selection_1)
@@ -114,7 +140,7 @@ class Statistics():
             be sampled several times).
 
         Returns:
-
+            list with rmsds
         """
         diffs = []
         get_one_randomized_structure_property_partial = partial(
@@ -170,12 +196,28 @@ class Statistics():
 
     @staticmethod
     def trimean(data):
+        """
+        
+        Args:
+            data: numeric data 
+
+        Returns:
+            trimean (float) for data 
+        """
         q1 = np.quantile(data, 0.25)
         q3 = np.quantile(data, 0.75)
         return (q1 + 2 * np.median(data) + q3) / 4
 
     @staticmethod
     def interquartile_mean(data):
+        """
+        
+        Args:
+            data: numeric data
+
+        Returns:
+            interquartile mean (float) for data
+        """
         q1 = np.quantile(data, 0.25)
         q3 = np.quantile(data, 0.75)
         sorted_data = np.sort(data)
@@ -184,18 +226,42 @@ class Statistics():
 
     @staticmethod
     def midhinge(data):
+        """
+        
+        Args:
+            data: numeric data
+
+        Returns:
+            midhinge mean (float) for data
+        """
         q1 = np.quantile(data, 0.25)
         q3 = np.quantile(data, 0.75)
         return np.mean([q1, q3])
 
     @staticmethod
     def val_range(data):
+        """
+        
+        Args:
+            data: numeric data
+
+        Returns:
+            value range (float)
+        """
         max_val = np.max(data)
         min_val = np.min(data)
         return abs(max_val - min_val)
 
     @staticmethod
     def mid_range(data):
+        """
+        
+        Args:
+            data: numeric data
+
+        Returns:
+            midpoint of value range as measure of centrality 
+        """
         return (np.max(data) + np.min(data)) / 2
 
 
@@ -341,7 +407,7 @@ class DistStatistic(Statistics):
         """
 
         Returns:
-            Descriptive statistics for each feature column.
+            dictionary with descriptive statistics for each feature column.
 
         """
         if self.list_of_list_mode:
@@ -462,8 +528,8 @@ class DistComparison():
     def from_folders(cls,
                      folder_1: str,
                      folder_2: str,
-                     property_list_1: [list, pd.DataFrame] = [],
-                     property_list_2: [list, pd.DataFrame] = [],
+                     property_list_1: [list, pd.DataFrame] = None,
+                     property_list_2: [list, pd.DataFrame] = None,
                      extension='cif'):
         """Constructor method for a DistComparison object"""
         sl_1 = get_structure_list(folder_1, extension)
@@ -692,6 +758,7 @@ class DistComparison():
     def _optimal_kernel_width(samples):
         """
         Following a example from Dougal J. Sutherland use the median pairwise squared distances as heuristic.
+
         Args:
             samples:
 
@@ -749,9 +816,11 @@ class DistComparison():
     @staticmethod
     def _properties_test_statistics(property_list_1, property_list_2):
         """
-        Preforms a range of statistical tests of the property distributions and returns a dictionary with the statistics. 
-        Returns:
+        Preforms a range of statistical tests of the property distributions
+        and returns a dictionary with the statistics.
 
+        Returns:
+            dictionary with test results
         """
 
         # Mutual information, continuous form from https://gist.github.com/GaelVaroquaux/ead9898bd3c973c40429
