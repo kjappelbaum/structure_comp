@@ -94,6 +94,16 @@ measures of central tendency like the trimean which are not that commonly used (
 The :code:`DistExample` class clusters the database (e.g. based on same property space) and then
 compares the sample to the :math:`k` samples closest to the centroids.
 
+maximum mean discrepancy (MMD)
+...............................
+
+MMD basically uses the kernel trick. 
+
+.. warning::
+
+    There are better implementations for MMD and especially the choice of the kernel width.
+    In a future release, we might introduce shogon as optional dependency and use it if installed.
+
 
 Sampling
 ---------

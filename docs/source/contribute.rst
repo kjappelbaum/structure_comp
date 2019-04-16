@@ -23,7 +23,7 @@ describing the thing you want to have implemented.
 
     At this stage I would be particulary happy about suggestions for better API design.
     During testing I noticed that some function names are probably not the best ones one could
-    chose. I would be happy over all suggestions! 
+    chose. I would be happy over all suggestions!
 
 Code contributions
 ------------------
