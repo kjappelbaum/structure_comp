@@ -67,23 +67,27 @@ distribution the :code:`DistComparison` class is the one you might want to use.
 Under the hood, it runs different statistical tests feature by feature and some also over the complete
 dataset and then returns a dictionary with the test statistics.
 
+
+QQ-plot
+*******
+
 Something really useful is to do a QQ-test. By default we will plot the result but
 also give you some metric like the deviation of the slope of Huber regression trough the qq-plot
 from the diagonal. If the distributions are identical, you should see something like
 
 .. figure:: _static/qq_identical.png
-    :width: 200px
+    :width: 400px
     :align: center
     :alt: QQ-plot for identical distributions
     :figclass: align-center
 
-    QQ-plot for the void fractions of the structures in the Core-COF datset.
+    QQ-plot for the void fractions of the structures in the Core-COF datset.:cite:`tong_exploring_2017`.
 
 Whereas, if the value of the property is consistently lower for one dataset, we would
 expect something like
 
 .. figure:: _static/qq_different.png
-    :width: 200px
+    :width: 400px
     :align: center
     :alt: QQ-plot for different distributions
     :figclass: align-center
