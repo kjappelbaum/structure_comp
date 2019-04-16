@@ -13,13 +13,6 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-AXIS_SWAPS = np.array([[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 1, 0],
-                       [2, 0, 1]])
-
-AXIS_REFLECTIONS = np.array([[1, 1, 1], [-1, 1, 1], [1, -1, 1], [1, 1, -1],
-                             [-1, -1, 1], [-1, 1, -1], [1, -1, -1],
-                             [-1, -1, -1]])
-
 
 def rmsd(V: np.array, W: np.array):
     """
@@ -150,84 +143,6 @@ def kabsch(P, Q):
     U = np.dot(V, W)
 
     return U
-
-
-def quaternion_rmsd(P, Q):
-    """
-    Rotate matrix P unto Q and calculate the RMSD
-    based on doi:10.1016/1049-9660(91)90036-O
-
-    Parameters
-    ----------
-    P : array
-        (N,D) matrix, where N is points and D is dimension.
-    Q : array
-        (N,D) matrix, where N is points and D is dimension.
-
-    Returns
-    -------
-    rmsd : float
-    """
-    rot = quaternion_rotate(P, Q)
-    P = np.dot(P, rot)
-    return rmsd(P, Q)
-
-
-def quaternion_transform(r):
-    """
-    Get optimal rotation
-    note: translation will be zero when the centroids of each molecule are the
-    same
-    """
-    Wt_r = makeW(*r).T
-    Q_r = makeQ(*r)
-    rot = Wt_r.dot(Q_r)[:3, :3]
-    return rot
-
-
-def makeW(r1, r2, r3, r4=0):
-    """
-    matrix involved in quaternion rotation
-    """
-    W = np.asarray([[r4, r3, -r2, r1], [-r3, r4, r1, r2], [r2, -r1, r4, r3],
-                    [-r1, -r2, -r3, r4]])
-    return W
-
-
-def makeQ(r1, r2, r3, r4=0):
-    """
-    matrix involved in quaternion rotation
-    """
-    Q = np.asarray([[r4, -r3, r2, r1], [r3, r4, -r1, r2], [-r2, r1, r4, r3],
-                    [-r1, -r2, -r3, r4]])
-    return Q
-
-
-def quaternion_rotate(X, Y):
-    """
-    Calculate the rotation
-
-    Parameters
-    ----------
-    X : array
-        (N,D) matrix, where N is points and D is dimension.
-    Y: array
-        (N,D) matrix, where N is points and D is dimension.
-
-    Returns
-    -------
-    rot : matrix
-        Rotation matrix (D,D)
-    """
-    N = X.shape[0]
-    W = np.asarray([makeW(*Y[k]) for k in range(N)])
-    Q = np.asarray([makeQ(*X[k]) for k in range(N)])
-    Qt_dot_W = np.asarray([np.dot(Q[k].T, W[k]) for k in range(N)])
-    A = np.sum(Qt_dot_W, axis=0)
-    eigen = np.linalg.eigh(A)
-    r = eigen[1][:, eigen[0].argmax()]
-    rot = quaternion_transform(r)
-    return rot
 
 
 def centroid(X):
