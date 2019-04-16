@@ -18,6 +18,13 @@ describing the thing you want to have implemented.
     Note that we only support python 3.x. We will make no efforts to support
     python 2.x.
 
+
+.. note::
+
+    At this stage I would be particulary happy about suggestions for better API design.
+    During testing I noticed that some function names are probably not the best ones one could
+    chose. I would be happy over all suggestions! 
+
 Code contributions
 ------------------
 If you want to contribute code, please follow a few little guidelines:
