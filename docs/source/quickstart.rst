@@ -71,8 +71,8 @@ dataset and then returns a dictionary with the test statistics.
 QQ-plot
 *******
 
-Something really useful is to do a QQ-test. By default we will plot the result but
-also give you some metric like the deviation of the slope of Huber regression trough the qq-plot
+Something really useful is to do a QQ-test. By default, we will plot the result but
+also give you some metrics like the deviation of the slope of Huber regression trough the qq-plot
 from the diagonal. If the distributions are identical, you should see something like
 
 .. figure:: _static/qq_identical.png
