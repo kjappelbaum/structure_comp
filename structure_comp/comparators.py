@@ -15,7 +15,8 @@ from scipy.spatial import distance
 from sklearn.linear_model import HuberRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.metrics.pairwise import euclidean_distances
-from scipy.stats import pearsonr, ks_2samp, mannwhitneyu, ttest_ind, anderson_ksamp
+from scipy.stats import pearsonr, ks_2samp, mannwhitneyu, ttest_ind, \
+    anderson_ksamp, gmean, hmean, kurtosis, mode, variation, skew, normaltest, kruskal
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
@@ -289,6 +290,82 @@ class DistStatistic(Statistics):
         distances = self._randomized_rmsd(self.structure_list,
                                           self.structure_list, iterations)
         return distances
+
+    @staticmethod
+    def _properties_test_statistics(property_list):
+        """
+        Returns various descriptive statistics for an array.
+        Inspired by what Eric Schles (https://github.com/EricSchles) presented in the NYC data science meetup
+
+        Args:
+            property_list (list): list of numeric values for which descriptive statistics will be computed
+
+        Returns:
+            result_dict (dict): dictionary with descriptive statistics
+
+        """
+        property_list = np.array(property_list)
+
+        q1 = np.percentile(property_list, 25)
+        q3 = np.percentile(property_list, 75)
+
+        agostino = normaltest(property_list)
+        result_dict = {
+            'trimean': Statistics.trimean(property_list),
+            'midhinge': Statistics.midhinge(property_list),
+            'interquartile_mean': Statistics.interquartile_mean(property_list),
+            'value_range': Statistics.val_range(property_list),
+            'mid_range': Statistics.mid_range(property_list),
+            'minimum': np.min(property_list),
+            'maximum': np.max(property_list),
+            'median': np.median(property_list),
+            'stdev': np.std(property_list),
+            'variance': np.variance(property_list),
+            'geometric_mean': gmean(property_list),
+            'harmonic_mean': hmean(property_list),
+            'mean': np.mean(property_list),
+            'interquartile_range': q3 - q1,
+            'quartile_1': q1,
+            'quartile_3': q3,
+            'kurtosis': kurtosis(property_list),
+            'mode': mode(property_list),
+            'variation': variation(property_list),
+            'skew': skew(property_list),
+            'D_Agostino_statistic': agostino[0],
+            'D_Agostino_p_value': agostino[1],
+        }
+
+        return result_dict
+
+    def properties_statistic(self):
+        """
+
+        Returns:
+            Descriptive statistics for each feature column.
+
+        """
+        if self.list_of_list_mode:
+            # concurrently loop of the different feature columns.
+            with concurrent.futures.ProcessPoolExecutor() as executor:
+                logger.debug(
+                    'looping over feature columns for properties statistics')
+                out_dict = {}
+                for i, results_dict in enumerate(
+                        executor.map(DistStatistic._properties_test_statistics,
+                                     self.property_list)):
+                    logger.debug('Creating statistics for %s',
+                                 self.feature_names[i])
+                    self.properties_statistics[self.
+                                               feature_names[i]] = results_dict
+                    out_dict[self.feature_names[i]] = results_dict
+            return out_dict
+        else:
+            out_dict = {}
+            results_dict = DistStatistic._properties_test_statistics(
+                self.property_list)
+            self.properties_statistics[self.feature_names] = results_dict
+            out_dict[self.feature_names] = results_dict
+            return out_dict
 
 
 class DistComparison():
@@ -705,6 +782,9 @@ class DistComparison():
         # t-test
         ttest = ttest_ind(property_list_1, property_list_2)
 
+        # Kruskal-Wallis H
+        kruskal_wallis_h = kruskal(property_list_1, property_list_1)
+
         result_dict = {
             'mutual_information': mi,
             'ks_statistic': ks[0],
@@ -718,6 +798,8 @@ class DistComparison():
             'anderson_darling_statistic': ad[0],
             'anderson_darling_p_value': ad[-1],
             'anderson_darling_critical_values': ad[1],
+            'kruskal_wallis_h_statistic': kruskal_wallis_h[0],
+            'kruskal_wallis_h_p_value': kruskal_wallis_h[1]
         }
 
         return result_dict

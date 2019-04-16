@@ -61,20 +61,16 @@ def kabsch_rmsd(P, Q, translate=False):
     rmsd : float
         root-mean squared deviation
     """
-    logger.debug('I am now in the Kabsch routine')
     if P.shape[0] > Q.shape[0]:
-        logger.debug('Zero padded the Q array')
         Q_temp = np.zeros(P.shape)
         Q_temp[:Q.shape[0], :Q.shape[1]] = Q
         Q = Q_temp
     elif Q.shape[0] > P.shape[0]:
-        logger.debug('Zero padded the P array')
         P_temp = np.zeros(Q.shape)
         P_temp[:P.shape[0], :P.shape[1]] = P
         P = P_temp
 
     if translate:
-        logger.debug('Perfoming translation move')
         Q = Q - centroid(Q)
         P = P - centroid(P)
 
