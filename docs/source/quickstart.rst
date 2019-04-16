@@ -100,6 +100,8 @@ To run the QQ-test, you only need something like the following lines
 
     void_fraction_martin_cc.qq_test()
 
+In our results dictionary, we would find :code:`'deviation_from_ideal_diagonal': -3.6`
+which indicates that the Huber regression is much steeper than the diagonal. 
 
 
 Finding out if a structure is different from a distribution
