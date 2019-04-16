@@ -272,7 +272,7 @@ class DistStatistic(Statistics):
         self.feature_names = None
         self.properties_statistics = {}
 
-        if property_list:
+        if property_list not None:
             if isinstance(property_list, pd.DataFrame):
                 logger.debug('Input seems to be a dataframe')
                 self.list_of_list_mode = True
@@ -468,7 +468,7 @@ class DistComparison():
         self.jaccards = None
         self.random_structure_property = {}
 
-        if property_list_1 and property_list_2:
+        if (property_list_1 not None) and (property_list_2 not None):
             if not isinstance(self.property_list_1, type(
                     self.property_list_2)):
                 raise ValueError(
