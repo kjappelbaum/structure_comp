@@ -67,6 +67,40 @@ distribution the :code:`DistComparison` class is the one you might want to use.
 Under the hood, it runs different statistical tests feature by feature and some also over the complete
 dataset and then returns a dictionary with the test statistics.
 
+Something really useful is to do a QQ-test. By default we will plot the result but
+also give you some metric like the deviation of the slope of Huber regression trough the qq-plot
+from the diagonal. If the distributions are identical, you should see something like
+
+.. figure:: _static/qq_identical.png
+    :width: 200px
+    :align: center
+    :alt: QQ-plot for identical distributions
+    :figclass: align-center
+
+    QQ-plot for the void fractions of the structures in the Core-COF datset.
+
+Whereas, if the value of the property is consistently lower for one dataset, we would
+expect something like
+
+.. figure:: _static/qq_different.png
+    :width: 200px
+    :align: center
+    :alt: QQ-plot for different distributions
+    :figclass: align-center
+
+    QQ-plot for the void fractions of the structures in the Core-COF datset and the hypothetical
+    COF dataset of Martin et al.
+
+To run the QQ-test, you only need something like the following lines
+
+::
+
+    void_fraction_martin_cc = DistComparison(property_list_1=df_martin['voidfraction'].values,
+                         property_list_2=df_cc['voidfraction'].values)
+
+    void_fraction_martin_cc.qq_test()
+
+
 
 Finding out if a structure is different from a distribution
 ````````````````````````````````````````````````````````````
