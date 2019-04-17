@@ -97,7 +97,7 @@ compares the sample to the :math:`k` samples closest to the centroids.
 maximum mean discrepancy (MMD)
 ...............................
 
-MMD basically uses the kernel trick. 
+MMD basically uses the kernel trick.
 
 .. warning::
 

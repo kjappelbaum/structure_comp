@@ -13,7 +13,7 @@ from .utils import get_structure_list, get_rmsd, closest_index, tanimoto_distanc
 import random
 from scipy.spatial import distance
 from sklearn.linear_model import HuberRegressor
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from sklearn.metrics.pairwise import euclidean_distances
 from scipy.stats import pearsonr, ks_2samp, mannwhitneyu, ttest_ind, \
     anderson_ksamp, gmean, kurtosis, mode, variation, skew, normaltest, kruskal
@@ -643,11 +643,12 @@ class DistComparison():
                      '--k',
                      label='diagonal')
             plt.plot(quantiles1, predictions, label='Huber regression')
-            plt.legend()
+            # plt.legend()
 
         results_dict = {
             'mse': mse,
             'r2': r2,
+            'mae_diagonal': mean_absolute_error(quantiles1, quantiles2),
             'deviation_from_ideal_diagonal': 1 - hr.coef_[0],
             'pearson_correlation_coefficient': pearson[0],
             'pearson_p_value': pearson[1],
