@@ -17,8 +17,10 @@ from tqdm.autonotebook import tqdm
 from .utils import get_subgraphs_as_molecules_all, get_structure_list
 import numpy as np
 import logging
+from pathlib import Path
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
+
 
 class Checker():
     def __init__(self, structure_list):
@@ -45,6 +47,7 @@ class Checker():
         dm = s.distance_matrix
 
         if np.min(dm + np.eye(len(dm))) < threshold:
+            logger.debug('minimum is %s', np.min(dm + np.eye(len(dm))))
             return True
         else:
             return False
@@ -70,19 +73,25 @@ class Checker():
 
         symbols = s.symbol_set
 
+        return_val = True
+
         if strictness == 'tight':
+            logger.debug('running H check with tigh strictness')
             if not 'H' in symbols:
+                return_val = False
                 return False
         elif strictness == 'medium':
+            logger.debug('running H check with medium strictness')
             if 'C' in symbols:
                 if not 'H' in symbols:
+                    return_val = False
                     return False
         elif strictness == 'CH':
+            logger.debug('running H check with CH strictness')
             if 'C' in symbols:
                 c_sites = s.indices_from_symbol('C')
                 for c_site in c_sites:
                     neighbors = s.get_neighbors(s[c_site], neighbor_threshold)
-                    print(neighbors)
                     neighbors_symbol_list = [
                         neighbor_site[0].species_string
                         for neighbor_site in neighbors
@@ -92,12 +101,13 @@ class Checker():
                         if neighbor_site[0].species_string != 'H'
                     ]
                     if len(neighbors_symbol_list) == 0:
+                        return_val = False
                         return False
                     if len(neighbors_no_h) <= 2:
                         if len(neighbors) - len(neighbors_no_h) == 0:
+                            return_val = False
                             return False
-            else:
-                return True
+        return return_val
 
     @staticmethod
     def check_unbound(s: Structure,
@@ -162,7 +172,6 @@ class Checker():
 
     @staticmethod
     def flag_potential_problems(structure_path: str,
-                                name: str = None,
                                 clashing_threshold: float = 0.5,
                                 bond_threshold: float = 2.0) -> dict:
         """
@@ -179,7 +188,7 @@ class Checker():
 
         """
         problem_dict = {}
-        problem_dict['name'] = name
+        problem_dict['name'] = Path(structure_path).stem
 
         # In some cases, we might not be able to read the structure,
         # then we set all check results to np.nan and set cif_error = True
@@ -199,7 +208,7 @@ class Checker():
 
             # one other potential problem is that there might be unbound solvent
             problem_dict['unbound'] = Checker.check_unbound(
-                s, bond_threshold + 0.5)
+                s, threshold=bond_threshold + 0.5)
 
             # one other problem is that there might be missing hydrogens
             # a naive check would be if there are hydrogens at all in the file
