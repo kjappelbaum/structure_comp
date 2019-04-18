@@ -454,18 +454,18 @@ class Cleaner():
 
     @staticmethod
     def check_hydrogens(s: Structure,
-                        check_ch: bool = True,
                         neighbor_threshold: float = 2.0,
-                        strict: bool = False) -> bool:
+                        strictness: str = 'CH') -> bool:
         """
         checks if there are any hydrogens in a structure object.
 
         Args:
             s (pymatgen structure object): structure to be checked
-            check_ch (bool): if true, it performs a tighter check
             neighbor_threshold (float): threshold for distance that is still considered to be bonded
-            strict (bool): if strict, it will return False for any structure that does not contain H, if False
-                it will only return False if there are no hydrogens in the structure and there are carbons
+            strictness (str): available levels: 'tight': returns false if there is no H at all, 'medium'
+                returns false if there are carbons but no hydrogens, 'CH' (default) checks if there are
+                carbons with less or equal 2 non-hydrogen neighbors (e.g. the most common case for aromatic rings).
+                If those have also no hydrogen bonded to them, it will return False
 
         Returns:
 
@@ -473,15 +473,14 @@ class Cleaner():
 
         symbols = s.symbol_set()
 
-        if not strict:
+        if strictness == 'tight':
             if not 'H' in symbols:
                 return False
-        else:
+        elif strictness == 'medium':
             if 'C' in symbols:
                 if not 'H' in symbols:
                     return False
-
-        if check_ch:
+        elif strictness == 'CH':
             if 'C' in symbols:
                 c_sites = s.indices_from_symbol('C')
                 for c_site in c_sites:
@@ -494,12 +493,35 @@ class Cleaner():
                         neighbor_site for neighbor_site in neighbors
                         if neighbor_site.species_string != 'H'
                     ]
-                    if len(neighbors_no_h) < 2:
-                        if len(neighbors) - len(neighbors_no_h) == 0:
-                            return False
                     if len(neighbors_symbol_list) == 0:
                         return False
+                    if len(neighbors_no_h) <= 2:
+                        if len(neighbors) - len(neighbors_no_h) == 0:
+                            return False
+            else:
+                return True
+
+    @staticmethod
+    def check_unbound(s: Structure, whitelist: list = ['H'], threshold: float = 2.0):
+        """
+        This uses the fact that unbound solvent is often in pores
+        and more distant from all other atoms. So far this test focusses on water.
+
+        Args:
+            s (pymatgen structure object): structure to be checked
+            whitelist (list): elements that are not considered in the check
+
+        Returns:
+
+        """
+        if whitelist:
+            crystal = s.copy()
+            crystal.remove_species(whitelist)
+            distance_matrix = crystal.distance_matrix()
         else:
+            distance_matrix = s.distance_matrix()
+
+        if np.max(distance_matrix) > threshold:
             return True
 
     @staticmethod
@@ -529,7 +551,10 @@ class Cleaner():
             s, threshold=clashing_threshold)
 
         # one other potential problem is that there might be unbound solvent
+        problem_dict['unbound'] = Cleaner.check_unbound(s, bond_threshold)
 
         # one other problem is that there might be missing hydrogens
         # a naive check would be if there are hydrogens at all in the file
         problem_dict['hydrogens'] = Cleaner.check_hydrogens(s, bond_threshold)
+
+        return problem_dict
