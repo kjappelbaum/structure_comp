@@ -431,3 +431,105 @@ class Cleaner():
                     executor.map(partial_rewrite_cifs, self.structure_list),
                     total=len(self.structure_list)):
                 self.rewritten_paths.append(outpath)
+
+    @staticmethod
+    def check_clashing(s: Structure, threshold: float = 0.5) -> bool:
+        """
+        Takes a pymatgen structure object and checks if there are atoms that are too close (i.e. their distance
+        is smaller than the threshold).
+
+        Args:
+            s (pymatgen structure object): structure to be checked
+            threshold (float): used as a check for clashing atoms
+
+        Returns:
+
+        """
+        distance_matrix = s.distance_matrix()
+
+        if np.min(distance_matrix) < threshold:
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def check_hydrogens(s: Structure,
+                        check_ch: bool = True,
+                        neighbor_threshold: float = 2.0,
+                        strict: bool = False) -> bool:
+        """
+        checks if there are any hydrogens in a structure object.
+
+        Args:
+            s (pymatgen structure object): structure to be checked
+            check_ch (bool): if true, it performs a tighter check
+            neighbor_threshold (float): threshold for distance that is still considered to be bonded
+            strict (bool): if strict, it will return False for any structure that does not contain H, if False
+                it will only return False if there are no hydrogens in the structure and there are carbons
+
+        Returns:
+
+        """
+
+        symbols = s.symbol_set()
+
+        if not strict:
+            if not 'H' in symbols:
+                return False
+        else:
+            if 'C' in symbols:
+                if not 'H' in symbols:
+                    return False
+
+        if check_ch:
+            if 'C' in symbols:
+                c_sites = s.indices_from_symbol('C')
+                for c_site in c_sites:
+                    neighbors = s.get_neighbors(c_site, neighbor_threshold)
+                    neighbors_symbol_list = [
+                        neighbor_site.species_string
+                        for neighbor_site in neighbors
+                    ]
+                    neighbors_no_h = [
+                        neighbor_site for neighbor_site in neighbors
+                        if neighbor_site.species_string != 'H'
+                    ]
+                    if len(neighbors_no_h) < 2:
+                        if len(neighbors) - len(neighbors_no_h) == 0:
+                            return False
+                    if len(neighbors_symbol_list) == 0:
+                        return False
+        else:
+            return True
+
+    @staticmethod
+    def flag_potential_problems(s: Structure,
+                                name: str = None,
+                                clashing_threshold: float = 0.5,
+                                bond_threshold: float = 2.0) -> dict:
+        """
+        Runs several naive checks on a structure to find out if there are potential 
+        problems. 
+        
+        Args:
+            s (Structure): pymatgen structure object 
+            name (str): name that will be used as value for the 'name' key of the output dictionary. 
+            clashing_threshold (float): used as a check for clashing atoms
+            bond_threshold (float): threshold for what is still considered to be bonded
+
+        Returns:
+
+        """
+        problem_dict = {}
+
+        problem_dict['name'] = name
+
+        # one potential problem is that we might have disorder/clashing atoms
+        problem_dict['clashing'] = Cleaner.check_clashing(
+            s, threshold=clashing_threshold)
+
+        # one other potential problem is that there might be unbound solvent
+
+        # one other problem is that there might be missing hydrogens
+        # a naive check would be if there are hydrogens at all in the file
+        problem_dict['hydrogens'] = Cleaner.check_hydrogens(s, bond_threshold)
