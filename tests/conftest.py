@@ -26,6 +26,11 @@ def get_disordered_dmof_path():
 
 
 @pytest.fixture(scope='module')
+def get_disordered_uiobipy_path():
+    return os.path.join(THIS_DIR, 'structures_w_disorder', 'uio-bipy.cif')
+
+
+@pytest.fixture(scope='module')
 def get_cleaned_dmof_path():
     return os.path.join(THIS_DIR, 'structures_w_disorder',
                         '986883_cleaned.cif')
@@ -105,3 +110,11 @@ def get_two_distributions():
     y = laplace.rvs(size=n, loc=mu, scale=b)
 
     return x, y
+
+@pytest.fixture(scope='module')
+def get_uio_66_water_no_water():
+    s = Structure.from_file(
+        os.path.join(THIS_DIR, 'structures_w_water/UiO_66_water.cif'))
+    s_no_water = Structure.from_file(
+        os.path.join(THIS_DIR, 'structures_w_water/UiO-66_no_water.cif'))
+    return s, s_no_water

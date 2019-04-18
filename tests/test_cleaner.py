@@ -12,7 +12,6 @@ import pytest
 import os
 import filecmp
 import shutil
-from pymatgen import Structure
 from ase.io import read
 from structure_comp.cleaner import Cleaner
 THIS_DIR = os.path.dirname(__file__)
@@ -28,11 +27,8 @@ def test_rewrite_cif(tmp_dir, get_disordered_dmof_path, get_cleaned_dmof_path,
 
 
 @pytest.mark.slow
-def test_remove_solvent():
-    s = Structure.from_file(
-        os.path.join(THIS_DIR, 'structures_w_water/UiO_66_water.cif'))
-    s_no_water = Structure.from_file(
-        os.path.join(THIS_DIR, 'structures_w_water/UiO-66_no_water.cif'))
+def test_remove_solvent(get_uio_66_water_no_water):
+    s, s_no_water = get_uio_66_water_no_water
     s_cleaned = Cleaner.remove_unbound_solvent(s)
     assert s_cleaned == s_no_water
 
@@ -70,3 +66,4 @@ def test_openbabel(tmp_dir):
     Cleaner.openbabel(test_path)
     atoms = read(test_path)
     assert atoms.get_chemical_formula() == 'C192H96O120Zr24'
+

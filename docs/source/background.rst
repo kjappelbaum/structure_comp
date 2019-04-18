@@ -185,3 +185,8 @@ Removing disorder
     Please note that this module is experimental and does not work in all cases.
 
 
+Checking
+---------
+
+The :code:`Checker` class allows you to run with the :code:`run_flagging` function
+to run several test on a set of structures.

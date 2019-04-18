@@ -12,7 +12,7 @@ easy-to-use tools to:
 * remove structural duplicates from structural databases (useful for high-throughput studies)
 * compare structures and distributions across feature and structure space (useful for machine learning)
 * sample from structural database
-* clean structures
+* clean and check structures
 
 .. toctree::
    :maxdepth: 2
