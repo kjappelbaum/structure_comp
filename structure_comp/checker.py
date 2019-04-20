@@ -169,7 +169,9 @@ class Checker():
     @staticmethod
     def flag_potential_problems(structure_path: str,
                                 clashing_threshold: float = 0.5,
-                                bond_threshold: float = 2.0) -> dict:
+                                bond_threshold: float = 2.0,
+                                unbound_mode: str = 'naive',
+                                hydrogen_mode: str = 'CH') -> dict:
         """
         Runs several naive checks on a structure to find out if there are potential
         problems.
@@ -179,6 +181,8 @@ class Checker():
             name (str): name that will be used as value for the 'name' key of the output dictionary.
             clashing_threshold (float): used as a check for clashing atoms
             bond_threshold (float): threshold for what is still considered to be bonded
+            unbound_mode (str): mode for checking of unbound elements/molecules
+            hydrogen_mode (str): mode for checking missing for missing hydrogens
 
         Returns:
 
@@ -204,11 +208,11 @@ class Checker():
 
             # one other potential problem is that there might be unbound solvent
             problem_dict['unbound'] = Checker.check_unbound(
-                s, threshold=bond_threshold + 0.5)
+                s, mode=unbound_mode, threshold=bond_threshold + 0.5)
 
             # one other problem is that there might be missing hydrogens
             # a naive check would be if there are hydrogens at all in the file
             problem_dict['hydrogens'] = Checker.check_hydrogens(
-                s, bond_threshold)
+                s, bond_threshold, strictness=hydrogen_mode)
             problem_dict['cif_problem'] = False
         return problem_dict

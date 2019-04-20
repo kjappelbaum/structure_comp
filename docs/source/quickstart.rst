@@ -232,5 +232,5 @@ To run a large variety of checks on a structural database you can use something 
     checker_structures = glob('*/*.cif')
     checker_object = Checker(checker_structures)
 
-    problems_df = Checker.run_flagging()
+    problems_df = checker_object.run_flagging()
     problems_df.head()
