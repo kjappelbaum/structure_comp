@@ -254,6 +254,9 @@ class RemoveDuplicates():
 
         groups = [g for g in groups if len(g) >= 2]
 
+        del x
+        del tree
+
         duplicates = []
         for g in groups:
             if len(g) > 2:
@@ -261,6 +264,8 @@ class RemoveDuplicates():
                     duplicates.append(tuple((g[0], index)))
             else:
                 duplicates.append(tuple(g))
+
+        del groups
 
         duplicates = list(set(map(tuple, map(sorted, duplicates))))
 
