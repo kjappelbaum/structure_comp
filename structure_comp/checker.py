@@ -76,15 +76,13 @@ class Checker():
         return_val = True
 
         if strictness == 'tight':
-            logger.debug('running H check with tigh strictness')
+            logger.debug('running H check with tight strictness')
             if not 'H' in symbols:
-                return_val = False
                 return False
         elif strictness == 'medium':
             logger.debug('running H check with medium strictness')
             if 'C' in symbols:
                 if not 'H' in symbols:
-                    return_val = False
                     return False
         elif strictness == 'CH':
             logger.debug('running H check with CH strictness')
@@ -101,11 +99,9 @@ class Checker():
                         if neighbor_site[0].species_string != 'H'
                     ]
                     if len(neighbors_symbol_list) == 0:
-                        return_val = False
                         return False
                     if len(neighbors_no_h) <= 2:
                         if len(neighbors) - len(neighbors_no_h) == 0:
-                            return_val = False
                             return False
         return return_val
 

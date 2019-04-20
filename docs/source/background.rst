@@ -189,4 +189,15 @@ Checking
 ---------
 
 The :code:`Checker` class allows you to run with the :code:`run_flagging` function
-to run several test on a set of structures.
+to run several test on a set of structures:
+
+* It checks if there are clashing atoms (which might be due to disorder)
+* It checks if there a hydrogens in the structure, in three different strictness levels:
+  * check if there are any hydrogens at all
+  * check if there are carbons and any hydrogens at all
+  * check if there are carbons with less or equal two non-hydrogen neighbors if they contain any hydrogens (i.e.
+    something like aromatic carbons that contain no H)
+* Check if there are unbound (solvent) molecules/atoms in the structure, in two versions:
+  * threshold-based: is there any atom that has no neighbor closer than the threshold?
+  * graph based: are there unbound molecules in the structure graph (basically a more fancy nearest-neighbor thing)
+* Check if pymatgen can read the structure
