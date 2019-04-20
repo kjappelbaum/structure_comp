@@ -217,3 +217,20 @@ Removing unbound solvent
     Note that this routine is slow for large structures as it has to construct the
     structure graph.
 
+
+Checking structures
+--------------------
+
+To run a large variety of checks on a structural database you can use something like
+
+::
+
+    from structure_comp.checker import Checker
+    from glob import glob
+    import pandas as pd
+
+    checker_structures = glob('*/*.cif')
+    checker_object = Checker(checker_structures)
+
+    problems_df = Checker.run_flagging()
+    problems_df.head()
