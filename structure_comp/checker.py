@@ -14,12 +14,14 @@ from pymatgen.analysis.local_env import JmolNN
 import pandas as pd
 import concurrent.futures
 from tqdm.autonotebook import tqdm
+from scipy.spatial import cKDTree
 from .utils import get_subgraphs_as_molecules_all, get_structure_list
 import numpy as np
 import logging
 from pathlib import Path
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
+from pymatgen.io.cif import CifParser
 
 
 class Checker():
@@ -44,10 +46,30 @@ class Checker():
         Returns:
 
         """
-        dm = s.distance_matrix
+        x = s.cart_coords
+        tree = cKDTree(x)
+        groups = tree.query_ball_point(x, threshold)
+        groups = [g for g in groups if len(g) >= 2]
 
-        if np.min(dm + np.eye(len(dm))) < threshold:
-            logger.debug('minimum is %s', np.min(dm + np.eye(len(dm))))
+        del x
+        del tree
+
+        duplicates = []
+        for g in groups:
+            if len(g) > 2:
+                for _, index in enumerate(g[1:]):
+                    duplicates.append(tuple((g[0], index)))
+            else:
+                duplicates.append(tuple(g))
+
+        del groups
+
+        duplicates = list(set(map(tuple, map(sorted, duplicates))))
+
+        duplicates = [d for d in duplicates if d[0] != d[1]]
+
+        if len(duplicates) > 1:
+            logger.debug('found %s clashing positions', duplicates)
             return True
         else:
             return False
@@ -195,7 +217,8 @@ class Checker():
         # often, this is a good indication of major errors but in many other cases
         # if is also simply due to the fact that pymatgen can not read some symmetry string or so
         try:
-            s = Structure.from_file(structure_path)
+            s = CifParser(
+                structure_path, occupancy_tolerance=100).get_structures()[0]
         except:
             problem_dict['cif_error'] = True
             problem_dict['clashing'] = np.nan

@@ -16,6 +16,8 @@ import CifFile
 import tempfile
 from pathlib import Path
 import numpy as np
+from ase.io import read, write
+from ase.geometry import get_duplicate_atoms
 import re
 from tqdm.autonotebook import tqdm
 from functools import partial
@@ -61,6 +63,7 @@ class Cleaner():
     def rewrite_cif(path: str,
                     outdir: str,
                     remove_disorder: bool = True,
+                    remove_duplicates: bool = True,
                     p1: bool = False,
                     clean_symmetry: float = None) -> str:
         """
@@ -161,6 +164,7 @@ class Cleaner():
                 for label in image['_atom_site_label']:
                     type_symbols.append(re.sub('[^a-zA-Z]+', '', label))
                 image.AddItem('_atom_site_type_symbol', type_symbols)
+                image.AddLoopName('_atom_site_label', '_atom_site_type_symbol')
 
             if remove_disorder and '_atom_site_disorder_group' in image.keys():
                 indices_to_drop = []
@@ -222,6 +226,11 @@ class Cleaner():
                 spa = analyzer.SpacegroupAnalyzer(crystal, 0.1)
                 crystal = spa.get_refined_structure()
                 crystal.to(filename=outpath)
+
+            if remove_duplicates:
+                atoms = read(outpath)
+                get_duplicate_atoms(atoms, delete=True)
+                write(outpath, atoms)
 
             return outpath
 
@@ -404,12 +413,15 @@ class Cleaner():
 
     def rewrite_all_cifs(self,
                          remove_disorder: bool = True,
+                         p1: bool = False,
+                         remove_duplicates: bool = True,
                          clean_symmetry: float = None):
         """
         Loops concurrently over all cifs in a folder and rewrites them.
 
         Args:
             remove_disorder (bool): If True (default), then disorder groups other than 1 and . are removed.
+            p1 (bool): If True, sets symmetry to P1.
             clean_symmetry (float): uses spglib to symmetrize the structure with the specified tolerance, set to None
                 if you do not want to use it
 
@@ -423,6 +435,8 @@ class Cleaner():
         partial_rewrite_cifs = partial(
             Cleaner.rewrite_cif,
             outdir=self.outdir,
+            p1=p1,
+            remove_duplicates=remove_duplicates,
             remove_disorder=remove_disorder,
             clean_symmetry=clean_symmetry)
 
@@ -431,4 +445,3 @@ class Cleaner():
                     executor.map(partial_rewrite_cifs, self.structure_list),
                     total=len(self.structure_list)):
                 self.rewritten_paths.append(outpath)
-

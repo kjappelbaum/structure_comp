@@ -25,6 +25,7 @@ from ase.io import read, write
 from ase.build import niggli_reduce
 import matplotlib.pyplot as plt
 from tqdm.autonotebook import tqdm
+import numpy as np
 import pandas as pd
 from .rmsd import parse_periodic_case, kabsch_rmsd
 from .utils import get_structure_list, get_hash, attempt_supercell_pymatgen
@@ -203,6 +204,8 @@ class RemoveDuplicates():
                 }
                 feature_list.append(features)
             df = pd.DataFrame(feature_list)
+            df['density'] = df['density'].astype(np.float16)
+            df['symbol_hash'] = df['symbol_hash'].astype(np.int16)
             logger.debug('the dataframe looks like %s', df.head())
         return df
 
@@ -229,6 +232,8 @@ class RemoveDuplicates():
             }
             feature_list.append(features)
         df = pd.DataFrame(feature_list)
+        df['density'] = df['density'].astype(np.float16)
+        df['symbol_hash'] = df['symbol_hash'].astype(np.int16)
         logger.debug('the dataframe looks like %s', df.head())
 
         return df

@@ -201,6 +201,7 @@ You will find a new directory with structures that:
 * have a :code:`_atom_site_label` column that is equal to :code:`_atom_site_type_symbol` which we found to work well
   with RASPA
 * by default, we will also remove all disorder groups except :code:`.` and :code:`*`
+* optionally you can also remove duplicates (atoms closer 0.1 sAngstom) using a ASE routine.
 
 If you input files have a :code:`_atom_site_charge` column, you wil also
 find it in the output file.
