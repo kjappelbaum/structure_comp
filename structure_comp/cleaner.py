@@ -26,7 +26,8 @@ from scipy.spatial.distance import squareform
 from scipy.cluster.hierarchy import fcluster, linkage
 import os
 import concurrent.futures
-from .utils import slugify, get_symbol_indices, get_structure_list, get_subgraphs_as_molecules_all
+from .utils import slugify, get_symbol_indices, get_structure_list, get_subgraphs_as_molecules_all, \
+    get_duplicates_ktree, get_duplicates_dynamic_threshold
 import logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -347,8 +348,37 @@ class Cleaner():
         output.close()
 
     @staticmethod
+    def merge_clashing(s: Structure, tolerance_factor: float = 0.9):
+        """
+        Naive method for 'merging' clashing sites.
+        In case it the two sites are not the same elements, priority will be given to the heavier one.
+
+        Args:
+            s:
+
+        Returns:
+
+        """
+        crystal = s.copy()
+        duplicates = get_duplicates_dynamic_threshold(s, tolerance_factor)
+        logger.debug('found %s clashing sites', duplicates)
+        deleted = []
+        for duplicate in duplicates:
+            if (not duplicate[0] in deleted) and (not duplicate[1] in deleted):
+                element0 = crystal[duplicate[0]].specie.number
+                element1 = crystal[duplicate[1]].specie.number
+            if element0 == element1:
+                deleted.append(duplicate[1])
+            elif element0 > element1:
+                deleted.append(duplicate[1])
+            elif element0 < element1:
+                deleted.append(duplicate[0])
+        crystal.remove_sites(deleted)
+        return crystal
+
+    @staticmethod
     def remove_disorder(structure: Structure,
-                        distance: float = 0.1) -> Structure:
+                        distance: float = 0.3) -> Structure:
         """
         Merges sites within distance that are likely due to structural disorder.
 

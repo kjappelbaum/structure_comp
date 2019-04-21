@@ -218,6 +218,28 @@ Removing unbound solvent
     Note that this routine is slow for large structures as it has to construct the
     structure graph.
 
+Remove disorder
+```````````````
+For removal of disorder, we implemented two algorithms of different complexities.
+One performs hierachical clustering on the atomic coordinates and then merges the clashing sites of
+same elements.
+
+To more naive version, simply build a distance matrix (a KDTree for efficiency reasons)
+and then merges the the clashing sites with following priorities:
+* if the elements are the same, the first site remains
+* if the elements are different, the heavier element remains
+
+A code that is conservative (first uses the checker and then fixes the issues separately) could look as follows
+
+::
+    from structure_comp.utils import read_robust_pymatgen
+    from pathlib import Path
+
+    for structure in clashing_structures:
+        s = read_robust_pymatgen(structure)
+        name = Path(structure).name
+        s_cleaned = Cleaner.remove_disorder(s, 0.9)
+        s_cleaned.to(filename=os.path.join('unclashed', name))
 
 Checking structures
 --------------------

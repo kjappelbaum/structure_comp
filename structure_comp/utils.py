@@ -18,12 +18,15 @@ import functools
 from .rmsd import parse_periodic_case, kabsch_rmsd
 from pymatgen import Structure
 import numpy as np
+from scipy.spatial import cKDTree
 from scipy import stats
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
 from pymatgen.core import Molecule
 import networkx as nx
 import random
+from pymatgen.io.cif import CifParser
+from mendeleev import element
 import logging
 logger = logging.getLogger()
 
@@ -68,7 +71,7 @@ def get_number_bins(array):
         number of bins
     """
 
-    h = 2 * stats.iqr(array) * len(array) ** (-1.0 / 3.0)
+    h = 2 * stats.iqr(array) * len(array)**(-1.0 / 3.0)
 
     nb = (max(array) - min(array) / h == np.infty)
     if (nb == np.infty) or (nb == -np.infty):
@@ -326,3 +329,105 @@ def get_subgraphs_as_molecules_all(sg, use_weights=False):
         molecules.append(molecule)
 
     return molecules
+
+
+def read_robust_pymatgen(cifpath: str) -> Structure:
+    """
+    Creates also a structure object if there are clashing atoms.
+    
+    Args:
+        cifpath:
+
+    Returns:
+
+    """
+    s = CifParser(cifpath, occupancy_tolerance=100).get_structures()[0]
+    return s
+
+
+def get_duplicates_ktree(s: Structure, threshold: float = 0.2) -> list:
+    """
+
+    Args:
+        s:
+
+    Returns:
+
+    """
+    x = s.cart_coords
+    tree = cKDTree(x)
+    groups = tree.query_ball_point(x, threshold)
+    groups = [g for g in groups if len(g) >= 2]
+
+    del x
+    del tree
+
+    duplicates = []
+    for g in groups:
+        if len(g) > 2:
+            for _, index in enumerate(g[1:]):
+                duplicates.append(tuple((g[0], index)))
+        else:
+            duplicates.append(tuple(g))
+
+    del groups
+
+    duplicates = list(set(map(tuple, map(sorted, duplicates))))
+
+    duplicates = [d for d in duplicates if d[0] != d[1]]
+
+    return duplicates
+
+def get_duplicates_dynamic_threshold(s: Structure, factor: float = 1.0) -> list:
+    """
+    Tries to do a better job in finding clashing atoms by using a more dynamic threshold based on the VdW
+    radius.
+
+    Args:
+        s (Structure):
+        factor (float): factor by which the VdW radius is multiplied to calculate the threhols
+
+    Returns:
+
+    """
+    x = s.cart_coords
+    tree = cKDTree(x)
+
+    all_groups = []
+    for i, site in enumerate(s.sites):
+        # get vdw radius for dynamics thresholding
+        threshold = get_vdw_radius(site) * factor
+        groups = tree.query_ball_point(x, threshold)
+        groups = [g for g in groups if len(g) >= 2]
+        all_groups += groups
+
+    del x
+    del tree
+
+    duplicates = []
+    for g in all_groups:
+        if len(g) > 2:
+            for _, index in enumerate(g[1:]):
+                duplicates.append(tuple((g[0], index)))
+        else:
+            duplicates.append(tuple(g))
+
+    del all_groups
+
+    duplicates = list(set(map(tuple, map(sorted, duplicates))))
+
+    duplicates = [d for d in duplicates if d[0] != d[1]]
+
+    return duplicates
+
+def get_vdw_radius(site):
+    return element(site.species_string).vdw_radius
+
+
+def get_average_vdw_radii(site0, site1):
+    vdw0 = element(site0.species_string).vdw_radius
+    vdw1 = element(site1.species_string).vdw_radius
+
+    vdw = (vdw0 + vdw1) / 200
+
+    return vdw
