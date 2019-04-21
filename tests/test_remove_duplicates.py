@@ -27,8 +27,10 @@ def test_structure_folder():
     rd_object_3 = RemoveDuplicates(structure_list, cached=True, method='rmsd')
     rd_object_4 = RemoveDuplicates(structure_list, cached=False, method='rmsd')
 
-    rd_object_5 = RemoveDuplicates(structure_list, cached=True, method='rmsd_graph')
-    rd_object_6 = RemoveDuplicates(structure_list, cached=False, method='rmsd_graph')
+    rd_object_5 = RemoveDuplicates(
+        structure_list, cached=True, method='rmsd_graph')
+    rd_object_6 = RemoveDuplicates(
+        structure_list, cached=False, method='rmsd_graph')
 
     rd_object_1.run_filtering()
     assert rd_object_1.number_of_duplicates == 0
@@ -117,14 +119,11 @@ def test_supercells():
     structure_list = get_structure_list(
         os.path.join(THIS_DIR, 'structures_supercells'))
 
-   # rd_object_1 = RemoveDuplicates(
+    # rd_object_1 = RemoveDuplicates(
     #    structure_list, cached=True, method='rmsd')
-    rd_object_2 = RemoveDuplicates(
-        structure_list, cached=False, method='rmsd')
+    rd_object_2 = RemoveDuplicates(structure_list, cached=False, method='rmsd')
 
     #rd_object_1.run_filtering()
     #assert rd_object_1.number_of_duplicates == 1
     rd_object_2.run_filtering()
     assert rd_object_2.number_of_duplicates == 1
-
-

@@ -75,11 +75,14 @@ def test_mmd_test(get_two_distributions):
 
     normal_dist = get_two_distributions[0]
     laplace = get_two_distributions[1]
-    statistic_0, pvalue_0 = DistComparison.mmd_test(normal_dist.reshape(-1, 1), laplace.reshape(-1, 1))
-    statistic_1, pvalue_1 = DistComparison.mmd_test(normal_dist.reshape(-1, 1), normal_dist.reshape(-1, 1))
+    statistic_0, pvalue_0 = DistComparison.mmd_test(
+        normal_dist.reshape(-1, 1), laplace.reshape(-1, 1))
+    statistic_1, pvalue_1 = DistComparison.mmd_test(
+        normal_dist.reshape(-1, 1), normal_dist.reshape(-1, 1))
 
     assert pvalue_0 < 0.1
     assert pvalue_1 > 0.95
+
 
 def test_property_statistics(get_two_numeric_property_dataframes):
     df0 = get_two_numeric_property_dataframes[0]
@@ -87,11 +90,13 @@ def test_property_statistics(get_two_numeric_property_dataframes):
 
     comparator = DistComparison(property_list_1=df0, property_list_2=df1)
     result_dict = comparator.properties_test()
-    assert len(result_dict) == len(df0.columns) + 1 # it is one more because of global features
+    assert len(result_dict) == len(
+        df0.columns) + 1  # it is one more because of global features
 
     comparator = DistComparison(property_list_1=df0, property_list_2=df0)
     result_dict = comparator.properties_test()
-    assert len(result_dict) == len(df0.columns) + 1  # it is one more because of global
+    assert len(result_dict) == len(
+        df0.columns) + 1  # it is one more because of global
 
     # for column in list(df0.columns.values) + ['global']:
     #     sub_dict = result_dict[column]

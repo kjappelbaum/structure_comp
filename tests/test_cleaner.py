@@ -19,10 +19,12 @@ THIS_DIR = os.path.dirname(__file__)
 
 def test_rewrite_cif(tmp_dir, get_disordered_dmof_path, get_cleaned_dmof_path,
                      get_znbttbbdc_path, get_cleaned_znbttbbdc_path):
-    outfile = Cleaner.rewrite_cif(get_disordered_dmof_path, tmp_dir)
+    outfile = Cleaner.rewrite_cif(
+        get_disordered_dmof_path, tmp_dir, remove_duplicates=False)
     assert filecmp.cmp(outfile, get_cleaned_dmof_path)
 
-    outfile2 = Cleaner.rewrite_cif(get_znbttbbdc_path, tmp_dir)
+    outfile2 = Cleaner.rewrite_cif(
+        get_znbttbbdc_path, tmp_dir, remove_duplicates=False)
     assert filecmp.cmp(outfile2, get_cleaned_znbttbbdc_path)
 
 
@@ -66,4 +68,3 @@ def test_openbabel(tmp_dir):
     Cleaner.openbabel(test_path)
     atoms = read(test_path)
     assert atoms.get_chemical_formula() == 'C192H96O120Zr24'
-
