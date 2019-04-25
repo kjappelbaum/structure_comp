@@ -7,7 +7,7 @@ setup(
     url='',
     license='MIT',
     install_requires=[
-        'numpy>=1.14.3', 'pymatgen', 'ase', 'tqdm', 'pandas', 'scipy',
+        'numpy>=1.14.3', 'pymatgen', 'ase', 'tqdm', 'pandas', 'scipy>=1.3',
         'scikit-learn', 'numba', 'PyCifRW', 'matplotlib', 'mendeleev'
     ],
     extras_require={

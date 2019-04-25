@@ -378,7 +378,7 @@ def get_duplicates_ktree(s: Structure, threshold: float = 0.2) -> list:
 
     return duplicates
 
-def get_duplicates_dynamic_threshold(s: Structure, factor: float = 1.0) -> list:
+def get_duplicates_dynamic_threshold(s: Structure, factor: float = 0.5) -> list:
     """
     Tries to do a better job in finding clashing atoms by using a more dynamic threshold based on the VdW
     radius.
@@ -421,7 +421,7 @@ def get_duplicates_dynamic_threshold(s: Structure, factor: float = 1.0) -> list:
     return duplicates
 
 def get_vdw_radius(site):
-    return element(site.species_string).vdw_radius
+    return element(site.species_string).vdw_radius / 100
 
 
 def get_average_vdw_radii(site0, site1):

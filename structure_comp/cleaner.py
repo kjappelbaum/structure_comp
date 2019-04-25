@@ -230,7 +230,7 @@ class Cleaner():
 
             if remove_duplicates:
                 atoms = read(outpath)
-                get_duplicate_atoms(atoms, delete=True)
+                get_duplicate_atoms(atoms, 0.5, delete=True)
                 write(outpath, atoms)
 
             return outpath
