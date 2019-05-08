@@ -43,7 +43,7 @@ More details can be found in the [documentation](https://structure-comp.readthed
 
 Developers install in editable mode
 
-    pip -e . 
+    pip install -e . 
     
 and 
 
