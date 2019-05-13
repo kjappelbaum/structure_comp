@@ -49,16 +49,19 @@ class Statistics():
         Returns:
             Jaccard distance between two random structure graphs
         """
-        random_selection_1 = random.sample(structure_list_a, 1)[0]
-        random_selection_2 = random.sample(structure_list_b, 1)[0]
-        crystal_a = Structure.from_file(random_selection_1)
-        crystal_b = Structure.from_file(random_selection_2)
-        nn_strategy = JmolNN()
-        sgraph_a = StructureGraph.with_local_env_strategy(
-            crystal_a, nn_strategy)
-        sgraph_b = StructureGraph.with_local_env_strategy(
-            crystal_b, nn_strategy)
-        return sgraph_a.diff(sgraph_b, strict=False)['dist']
+        try:
+            random_selection_1 = random.sample(structure_list_a, 1)[0]
+            random_selection_2 = random.sample(structure_list_b, 1)[0]
+            crystal_a = Structure.from_file(random_selection_1)
+            crystal_b = Structure.from_file(random_selection_2)
+            nn_strategy = JmolNN()
+            sgraph_a = StructureGraph.with_local_env_strategy(
+                crystal_a, nn_strategy)
+            sgraph_b = StructureGraph.with_local_env_strategy(
+                crystal_b, nn_strategy)
+            return sgraph_a.diff(sgraph_b, strict=False)['dist']
+        except Exception:
+            return np.nan
 
     @staticmethod
     def _randomized_graphs(structure_list_a: list,
@@ -112,17 +115,20 @@ class Statistics():
             difference of feature for two randomly selected structures
             
         """
-        random_selection_1 = random.sample(structure_list_a, 1)[0]
-        random_selection_2 = random.sample(structure_list_b, 1)[0]
-        crystal_a = Structure.from_file(random_selection_1)
-        crystal_b = Structure.from_file(random_selection_2)
-        if feature == 'density':
-            diff = np.abs(crystal_a.density - crystal_b.density)
-        elif feature == 'num_sites':
-            diff = np.abs(crystal_a.num_sites - crystal_b.num_sites)
-        elif feature == 'volume':
-            diff = np.abs(crystal_a.volume - crystal_b.volume)
-        return diff
+        try:
+            random_selection_1 = random.sample(structure_list_a, 1)[0]
+            random_selection_2 = random.sample(structure_list_b, 1)[0]
+            crystal_a = Structure.from_file(random_selection_1)
+            crystal_b = Structure.from_file(random_selection_2)
+            if feature == 'density':
+                diff = np.abs(crystal_a.density - crystal_b.density)
+            elif feature == 'num_sites':
+                diff = np.abs(crystal_a.num_sites - crystal_b.num_sites)
+            elif feature == 'volume':
+                diff = np.abs(crystal_a.volume - crystal_b.volume)
+            return diff
+        except Exception:
+            return np.nan
 
     @staticmethod
     def _randomized_structure_property(structure_list_a: list,
@@ -160,10 +166,13 @@ class Statistics():
 
     @staticmethod
     def _get_one_rmsd(structure_list_a, structure_list_b, _):
-        random_selection_1 = random.sample(structure_list_a, 1)[0]
-        random_selection_2 = random.sample(structure_list_b, 1)[0]
-        a = get_rmsd(random_selection_1, random_selection_2)
-        return a
+        try:
+            random_selection_1 = random.sample(structure_list_a, 1)[0]
+            random_selection_2 = random.sample(structure_list_b, 1)[0]
+            a = get_rmsd(random_selection_1, random_selection_2)
+            return a
+        except Exception:
+            return np.nan
 
     @staticmethod
     def _randomized_rmsd(structure_list_a: list,
