@@ -38,7 +38,7 @@ def get_cleaned_dmof_path():
 
 @pytest.fixture(scope='module')
 def get_znbttbbdc_path():
-    return os.path.join(THIS_DIR, 'structures_for_rewrite', 'ZnBTTBBDC.cif')
+    return os.path.join(THIS_DIR, 'structures_for_rewrite', 'znbttbbdc_a.cif')
 
 
 @pytest.fixture(scope='module')
