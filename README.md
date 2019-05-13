@@ -10,7 +10,7 @@
 *Warning* The code is still under heavy development! 
 
 Small python package to efficiently remove duplicates from larger 
-structure databases and get some statistics (and more).
+structure databases, sample structures and compare structures and feature databases. 
 
 ## Acknowledgments
 
@@ -33,8 +33,7 @@ Besides the python standard library, we make use of the following open-source li
     [napoleon](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/index.html) 
     and [bibtex](https://github.com/mcmtroffaes/sphinxcontrib-bibtex) extensions
 
-Several of the libraries are supported by [NumFocus](https://numfocus.org/). If you love these tools and want to support
-open code, open science and the development of these packages, you might consider a donation to NumFocus. 
+Several of the libraries are supported by [NumFocus](https://numfocus.org/). 
 
 If we use code-snippets from the internet, we acknowledge this in the docstring of the function. 
 
