@@ -36,6 +36,20 @@ def test_randomized_structure_property(get_ten_identical_files):
     assert pytest.approx(sum(num_sites), 0.001) == 0.0
     assert pytest.approx(sum(volume), 0.001) == 0.0
 
+def test_randomized_structure_property_dist_comparator(get_ten_identical_files):
+    ds = DistComparison(get_ten_identical_files, get_ten_identical_files)
+    densities = ds.randomized_structure_property(iterations=10)
+    num_sites = ds.randomized_structure_property(
+        feature='num_sites', iterations=10)
+    volume = ds.randomized_structure_property(feature='volume', iterations=10)
+
+    assert pytest.approx(np.std(densities), 0.001) == 0.0
+    assert pytest.approx(np.std(num_sites), 0.001) == 0.0
+    assert pytest.approx(np.std(volume), 0.001) == 0.0
+
+    assert pytest.approx(sum(densities), 0.001) == 0.0
+    assert pytest.approx(sum(num_sites), 0.001) == 0.0
+    assert pytest.approx(sum(volume), 0.001) == 0.0
 
 def test_randomized_graphs(get_ten_identical_files):
     ds = DistStatistic(get_ten_identical_files)

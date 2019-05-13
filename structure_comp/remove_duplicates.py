@@ -17,7 +17,7 @@ import concurrent.futures
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.analysis.local_env import JmolNN
 from pymatgen.io.ase import AseAtomsAdaptor
-from scipy.spatial import cKDTree
+from scipy.spatial import KDTree
 import tempfile
 import logging
 from ase.visualize.plot import plot_atoms
@@ -254,7 +254,7 @@ class RemoveDuplicates():
         """
         x = scalar_feature_df.drop(columns=['name']).values
 
-        tree = cKDTree(x)
+        tree = KDTree(x)
         groups = tree.query_ball_point(x, threshold)
 
         groups = [g for g in groups if len(g) >= 2]
