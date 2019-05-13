@@ -436,7 +436,7 @@ class DistStatistic(Statistics):
             return out_dict
 
 
-class DistComparison():
+class DistComparison(Statistics):
     """
     Comparator to compare the difference or similarity between two distributions. 
     The idea is here to save the test statistics to the object such that we can
