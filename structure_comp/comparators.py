@@ -66,7 +66,7 @@ class Statistics():
     @staticmethod
     def _randomized_graphs(structure_list_a: list,
                            structure_list_b: list,
-                           iterations: int = 5000) -> list:
+                           iterations: int = 5000, njobs: int = 2) -> list:
         """
         Randomly sample structures from the structure list and compare their Jaccard graph distance.
 
@@ -75,6 +75,7 @@ class Statistics():
             structure_list_b (list): list of paths to structures
             iterations (int): Number of comparisons (sampling works with replacement, i.e. the same pair might
             be sampled several times).
+            njobs (int): the maximum number of workers
 
         Returns:
             list of length iterations of the Jaccard distances
@@ -86,7 +87,7 @@ class Statistics():
             Statistics._get_one_graph_comparison, structure_list_a,
             structure_list_b)
 
-        with concurrent.futures.ProcessPoolExecutor() as executor:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=njobs) as executor:
             logger.debug('iterating for graph comparisons')
 
             for diff in tqdm(
@@ -134,7 +135,7 @@ class Statistics():
     def _randomized_structure_property(structure_list_a: list,
                                        structure_list_b: list,
                                        feature: str = 'density',
-                                       iterations: int = 5000) -> list:
+                                       iterations: int = 5000, njobs: int = 2) -> list:
         """
 
         Args:
@@ -144,6 +145,7 @@ class Statistics():
                 density, num_sites, volume. Default is density.
             iterations (int): number of comparisons (sampling works with replacement, i.e. the same pair might
             be sampled several times).
+            njobs (int): the maximum number of concurrent workers
 
         Returns:
             list with rmsds
@@ -153,7 +155,7 @@ class Statistics():
             Statistics._get_one_randomized_structure_property,
             structure_list_a, structure_list_b, feature)
 
-        with concurrent.futures.ProcessPoolExecutor() as executor:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=njobs) as executor:
             logger.debug('iterating for graph comparisons')
 
             for diff in tqdm(
@@ -177,7 +179,8 @@ class Statistics():
     @staticmethod
     def _randomized_rmsd(structure_list_a: list,
                          structure_list_b: list,
-                         iterations: float = 5000) -> list:
+                         iterations: float = 5000,
+                         njobs:int = 2) -> list:
         """
 
         Args:
@@ -185,14 +188,15 @@ class Statistics():
             structure_list_b (list): list of paths to structures
             iterations (int): number of comparisons (sampling works with replacement, i.e. the same pair might
                   be sampled several times).
-
+            njobs (int): the maximum number of concurrent workers
+            
         Returns:
 
         """
         rmsds = []
 
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            logger.debug('iterating for graph comparisons')
+        with concurrent.futures.ProcessPoolExecutor(max_workers=njobs) as executor:
+            logger.debug('iterating for rmsd comparisons')
 
             get_one_rmsd_partial = partial(Statistics._get_one_rmsd,
                                            structure_list_a, structure_list_b)
@@ -275,11 +279,12 @@ class Statistics():
 
 
 class DistStatistic(Statistics):
-    def __init__(self, structure_list=None, property_list=None):
+    def __init__(self, structure_list=None, property_list=None, njobs: int = 2):
         self.structure_list = structure_list
         self.property_list = property_list
         self.feature_names = None
         self.properties_statistics = {}
+        self.njobs = njobs
 
         if property_list is not None:
             if isinstance(property_list, pd.DataFrame):
@@ -309,18 +314,19 @@ class DistStatistic(Statistics):
         return 'DistStatistic'
 
     @classmethod
-    def from_folder(cls, folder: str, extension: str = 'cif'):
+    def from_folder(cls, folder: str, extension: str = 'cif', njobs: int = 2):
         """
 
         Args:
             folder (str): name of the folder which is used to create the structure list
             extension (str): extension of the structure files
+            njobs (int): the maximum number of concurrent workers
 
         Returns:
 
         """
         sl = get_structure_list(folder, extension)
-        return cls(sl)
+        return cls(sl, njobs=njobs)
 
     def randomized_graphs(self, iterations: int = 5000) -> list:
         """
@@ -352,7 +358,7 @@ class DistStatistic(Statistics):
             list of property distances
         """
         distances = self._randomized_structure_property(
-            self.structure_list, self.structure_list, feature, iterations)
+            self.structure_list, self.structure_list, feature, iterations, self.njobs)
         return distances
 
     def randomized_rmsd(self, iterations: int = 5000) -> list:
@@ -366,7 +372,7 @@ class DistStatistic(Statistics):
             list of Kabsch RMSDs
         """
         distances = self._randomized_rmsd(self.structure_list,
-                                          self.structure_list, iterations)
+                                          self.structure_list, iterations, self.njobs)
         return distances
 
     @staticmethod
@@ -423,7 +429,7 @@ class DistStatistic(Statistics):
         """
         if self.list_of_list_mode:
             # concurrently loop of the different feature columns.
-            with concurrent.futures.ProcessPoolExecutor() as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=self.njobs) as executor:
                 logger.debug(
                     'looping over feature columns for properties statistics')
                 out_dict = {}
@@ -457,7 +463,9 @@ class DistComparison(Statistics):
                  structure_list_1: list = None,
                  structure_list_2: list = None,
                  property_list_1: [list, pd.DataFrame] = None,
-                 property_list_2: [list, pd.DataFrame] = None):
+                 property_list_2: [list, pd.DataFrame] = None,
+                 njobs: int = 2
+                 ):
         """
 
         Args:
@@ -477,6 +485,7 @@ class DistComparison(Statistics):
         self.rmsds = None
         self.jaccards = None
         self.random_structure_property = {}
+        self.njobs = njobs
 
         if (property_list_1 is not None) and (property_list_2 is not None):
             if not isinstance(self.property_list_1, type(
@@ -546,11 +555,12 @@ class DistComparison(Statistics):
                      folder_2: str,
                      property_list_1: [list, pd.DataFrame] = None,
                      property_list_2: [list, pd.DataFrame] = None,
-                     extension='cif'):
+                     extension='cif',
+                     njobs: int = 2):
         """Constructor method for a DistComparison object"""
         sl_1 = get_structure_list(folder_1, extension)
         sl_2 = get_structure_list(folder_2, extension)
-        return cls(sl_1, sl_2, property_list_1, property_list_2)
+        return cls(sl_1, sl_2, property_list_1, property_list_2, njobs=njobs)
 
     def randomized_graphs(self, iterations: int = 5000) -> list:
         """
@@ -564,7 +574,7 @@ class DistComparison(Statistics):
             list of jaccard distances
         """
         jaccards = self._randomized_graphs(self.structure_list_1,
-                                           self.structure_list_2, iterations)
+                                           self.structure_list_2, iterations, self.njobs)
         self.jaccards = jaccards
         return jaccards
 
@@ -585,7 +595,7 @@ class DistComparison(Statistics):
 
         """
         distances = self._randomized_structure_property(
-            self.structure_list_1, self.structure_list_2, feature, iterations)
+            self.structure_list_1, self.structure_list_2, feature, iterations, self.njobs)
         self.random_structure_property[feature] = distances
         return distances
 
@@ -603,7 +613,7 @@ class DistComparison(Statistics):
 
         """
         distances = self._randomized_rmsd(self.structure_list_1,
-                                          self.structure_list_2, iterations)
+                                          self.structure_list_2, iterations, self.njobs)
         self.rmsds = distances
         return distances
 
@@ -693,7 +703,7 @@ class DistComparison(Statistics):
         """
         if self.list_of_list_mode:
             # concurrently loop of the different feature columns.
-            with concurrent.futures.ProcessPoolExecutor() as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=self.njobs) as executor:
                 logger.debug('looping over feature columns for QQ statistics')
                 partial_single_qq = partial(
                     DistComparison._single_qq_test, plot=plot)
@@ -929,7 +939,7 @@ class DistComparison(Statistics):
         """
         if self.list_of_list_mode:
             # concurrently loop of the different feature columns.
-            with concurrent.futures.ProcessPoolExecutor() as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=self.njobs) as executor:
                 logger.debug(
                     'looping over feature columns for properties statistics')
                 out_dict = {}
