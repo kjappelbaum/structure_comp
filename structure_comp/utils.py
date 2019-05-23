@@ -15,7 +15,7 @@ from numba import jit
 import unicodedata
 from collections import defaultdict  # thanks Raymond Hettinger!
 import functools
-from .rmsd import parse_periodic_case, kabsch_rmsd
+from .rmsd import parse_periodic_case, kabsch_rmsd, reorder_hungarian
 from pymatgen import Structure
 import numpy as np
 from scipy.spatial import cKDTree
@@ -52,7 +52,13 @@ def get_structure_list(directory: str, extension: str = 'cif') -> list:
 
 @functools.lru_cache(maxsize=128, typed=False)
 def get_rmsd(structure_a: Structure, structure_b: Structure) -> float:
-    _, P, _, Q = parse_periodic_case(structure_a, structure_b)
+    p_a, P, q_a, Q = parse_periodic_case(structure_a, structure_b)
+
+    q_review = reorder_hungarian(p_a, q_a, P, Q)
+    Q = Q[q_review]
+    # q_atoms = q_atoms[q_review]
+
+
     result = kabsch_rmsd(P, Q)
     return result
 
