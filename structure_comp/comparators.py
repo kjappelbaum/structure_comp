@@ -213,7 +213,7 @@ class Statistics:
 
     @staticmethod
     def _get_one_rmsd(structure_list_a: list, structure_list_b: list, _) -> float:
-        logger.debug('i am in the _get_one_rmsd routine')
+        logger.debug("i am in the _get_one_rmsd routine")
         try:
             random_selection_1 = random.sample(structure_list_a, 1)[0]
             random_selection_2 = random.sample(structure_list_b, 1)[0]
@@ -784,7 +784,7 @@ class DistComparison(Statistics):
         distance_clustering_1s = []
         distance_clustering_2s = []
 
-        for i in range(n_runs):
+        for i in tqdm(range(n_runs)):
             knn_1, n_cluster_1 = self.optimal_knn(
                 np.transpose(np.array(self.property_list_1))
             )
