@@ -187,4 +187,6 @@ def test_cluster_comparison(get_two_numeric_property_dataframes):
         "std_min_min_outer_2",
     ]
 
+    print(knn_distances)
+
     assert set(expected_keys) == set(knn_distances.keys())

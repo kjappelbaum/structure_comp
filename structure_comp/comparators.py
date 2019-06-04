@@ -217,7 +217,8 @@ class Statistics:
             random_selection_2 = random.sample(structure_list_b, 1)[0]
             a = get_rmsd(random_selection_1, random_selection_2)
             return a
-        except Exception:
+        except Exception as e:
+            logger.error("Exception %s occured", e)
             return np.nan
 
     @staticmethod
@@ -247,6 +248,7 @@ class Statistics:
             get_one_rmsd_partial = partial(
                 Statistics._get_one_rmsd, structure_list_a, structure_list_b
             )
+
             for rmsd in tqdm(
                 executor.map(get_one_rmsd_partial, range(iterations)),
                 total=len(range(iterations)),
@@ -366,7 +368,7 @@ class Statistics:
 
 
 class DistStatistic(Statistics):
-    def __init__(self, structure_list=None, property_list=None, njobs: int = 2):
+    def __init__(self, structure_list=None, property_list=None, njobs: int = 1):
         self.structure_list = structure_list
         self.property_list = property_list
         self.feature_names = None
