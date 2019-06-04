@@ -1,12 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-__author__ = 'Kevin M. Jablonka'
-__copyright__ = 'MIT License'
-__maintainer__ = 'Kevin M. Jablonka'
-__email__ = 'kevin.jablonka@epfl.ch'
-__version__ = '0.1.0'
-__date__ = '14.04.19'
-__status__ = 'First Draft, Testing'
+__author__ = "Kevin M. Jablonka"
+__copyright__ = "MIT License"
+__maintainer__ = "Kevin M. Jablonka"
+__email__ = "kevin.jablonka@epfl.ch"
+__version__ = "0.1.0"
+__date__ = "14.04.19"
+__status__ = "First Draft, Testing"
 
 import os
 from pathlib import Path
@@ -31,14 +31,14 @@ from .rmsd import parse_periodic_case, kabsch_rmsd
 from .utils import get_structure_list, get_hash, attempt_supercell_pymatgen
 from collections import defaultdict
 
-logger = logging.getLogger('RemoveDuplicates')
+logger = logging.getLogger("RemoveDuplicates")
 logger.setLevel(logging.DEBUG)
 
 # ToDo: add XTalComp support
 # ToDo: more useful error message when file cannot be read
 
 
-class RemoveDuplicates():
+class RemoveDuplicates:
     """
     A RemoveDuplicates object operates on a collection of structure and allows
         - Removal of duplicates on the collection of structures using different methods, using the main
@@ -46,11 +46,13 @@ class RemoveDuplicates():
         - Basic comparisons between different RemoveDuplicates objects (e.g. comparing which one contains more duplicates)
     """
 
-    def __init__(self,
-                 structure_list: list,
-                 cached: bool = False,
-                 method='standard',
-                 try_supercell=True):
+    def __init__(
+        self,
+        structure_list: list,
+        cached: bool = False,
+        method="standard",
+        try_supercell=True,
+    ):
 
         self.structure_list = structure_list
         self.reduced_structure_dict = None
@@ -62,15 +64,17 @@ class RemoveDuplicates():
         self.tempdirpath = None
 
     def __repr__(self):
-        return f'RemoveDuplicates on {len(self.structure_list)!r} structures'
+        return f"RemoveDuplicates on {len(self.structure_list)!r} structures"
 
     @classmethod
-    def from_folder(cls,
-                    folder,
-                    cached: bool = False,
-                    extension='cif',
-                    method='standard',
-                    try_supercell=True):
+    def from_folder(
+        cls,
+        folder,
+        cached: bool = False,
+        extension="cif",
+        method="standard",
+        try_supercell=True,
+    ):
         """
 
         Args:
@@ -120,7 +124,7 @@ class RemoveDuplicates():
             # Cif reader in ASE seems more stable to me, especially for CSD data
             atoms = read(structure)
         except Exception:
-            logger.error('Could not read structure %s', stem)
+            logger.error("Could not read structure %s", stem)
         else:
             niggli_reduce(atoms)
             if not self.cached:
@@ -139,13 +143,13 @@ class RemoveDuplicates():
         if not self.cached:
             self.tempdirpath = tempfile.mkdtemp()
             self.reduced_structure_dir = self.tempdirpath
-        logger.info('creating reduced structures')
+        logger.info("creating reduced structures")
         with concurrent.futures.ThreadPoolExecutor() as executor:
             for _ in tqdm(
-                    executor.map(self.get_reduced_structure,
-                                 self.structure_list),
-                    total=len(self.structure_list)):
-                logger.debug('reduced structure for {} created'.format(_))
+                executor.map(self.get_reduced_structure, self.structure_list),
+                total=len(self.structure_list),
+            ):
+                logger.debug("reduced structure for {} created".format(_))
 
     @staticmethod
     def get_scalar_features(structure: Structure):
@@ -187,26 +191,29 @@ class RemoveDuplicates():
 
         """
         feature_list = []
-        logger.info('creating scalar features')
+        logger.info("creating scalar features")
 
         with concurrent.futures.ProcessPoolExecutor() as executor:
             for structure, result in tqdm(
-                    zip(
+                zip(
+                    reduced_structure_list,
+                    executor.map(
+                        RemoveDuplicates.get_scalar_features_from_file,
                         reduced_structure_list,
-                        executor.map(
-                            RemoveDuplicates.get_scalar_features_from_file,
-                            reduced_structure_list)),
-                    total=len(reduced_structure_list)):
+                    ),
+                ),
+                total=len(reduced_structure_list),
+            ):
                 features = {
-                    'name': structure,
-                    'symbol_hash': result[0],
-                    'density': result[1]
+                    "name": structure,
+                    "symbol_hash": result[0],
+                    "density": result[1],
                 }
                 feature_list.append(features)
             df = pd.DataFrame(feature_list)
-            df['density'] = df['density'].astype(np.float16)
-            df['symbol_hash'] = df['symbol_hash'].astype(np.int16)
-            logger.debug('the dataframe looks like %s', df.head())
+            df["density"] = df["density"].astype(np.float16)
+            df["symbol_hash"] = df["symbol_hash"].astype(np.int16)
+            logger.debug("the dataframe looks like %s", df.head())
         return df
 
     @staticmethod
@@ -220,27 +227,27 @@ class RemoveDuplicates():
 
         """
         feature_list = []
-        logger.info('creating scalar features')
+        logger.info("creating scalar features")
         for structure in tqdm(reduced_structure_dict):
             crystal = reduced_structure_dict[structure]
-            symbol_hash, density = RemoveDuplicates.get_scalar_features(
-                crystal)
+            symbol_hash, density = RemoveDuplicates.get_scalar_features(crystal)
             features = {
-                'name': structure,
-                'symbol_hash': symbol_hash,
-                'density': density
+                "name": structure,
+                "symbol_hash": symbol_hash,
+                "density": density,
             }
             feature_list.append(features)
         df = pd.DataFrame(feature_list)
-        df['density'] = df['density'].astype(np.float16)
-        df['symbol_hash'] = df['symbol_hash'].astype(np.int16)
-        logger.debug('the dataframe looks like %s', df.head())
+        df["density"] = df["density"].astype(np.float16)
+        df["symbol_hash"] = df["symbol_hash"].astype(np.int16)
+        logger.debug("the dataframe looks like %s", df.head())
 
         return df
 
     @staticmethod
-    def get_scalar_distance_matrix(scalar_feature_df: pd.DataFrame,
-                                   threshold: float = 0.01) -> list:
+    def get_scalar_distance_matrix(
+        scalar_feature_df: pd.DataFrame, threshold: float = 0.01
+    ) -> list:
         """
         Get structures that probably have the same composition.
 
@@ -252,7 +259,7 @@ class RemoveDuplicates():
             list of tuples which Euclidean distance is under threshold
 
         """
-        x = scalar_feature_df.drop(columns=['name']).values
+        x = scalar_feature_df.drop(columns=["name"]).values
 
         tree = KDTree(x)
         groups = tree.query_ball_point(x, threshold)
@@ -274,16 +281,18 @@ class RemoveDuplicates():
 
         duplicates = list(set(map(tuple, map(sorted, duplicates))))
 
-        logger.debug('found {} composition duplicates'.format(duplicates))
+        logger.debug("found {} composition duplicates".format(duplicates))
 
         return duplicates
 
     @staticmethod
-    def compare_rmsd(tupellist: list,
-                     scalar_feature_df: pd.DataFrame,
-                     threshold: float = 0.05,
-                     try_supercell: bool = True,
-                     reduced_structure_dict=None) -> list:
+    def compare_rmsd(
+        tupellist: list,
+        scalar_feature_df: pd.DataFrame,
+        threshold: float = 0.05,
+        try_supercell: bool = True,
+        reduced_structure_dict=None,
+    ) -> list:
         """
 
         Args:
@@ -295,41 +304,47 @@ class RemoveDuplicates():
         Returns:
 
         """
-        logger.info('doing RMSD comparison')
+        logger.info("doing RMSD comparison")
         pairs = []
         for items in tqdm(tupellist):
             if reduced_structure_dict is not None:
                 if items[0] != items[1]:
-                    crystal_a = reduced_structure_dict[scalar_feature_df.iloc[
-                        items[0]]['name']]
-                    crystal_b = reduced_structure_dict[scalar_feature_df.iloc[
-                        items[1]]['name']]
+                    crystal_a = reduced_structure_dict[
+                        scalar_feature_df.iloc[items[0]]["name"]
+                    ]
+                    crystal_b = reduced_structure_dict[
+                        scalar_feature_df.iloc[items[1]]["name"]
+                    ]
 
                     _, P, _, Q = parse_periodic_case(
                         crystal_a,
                         crystal_b,
                         try_supercell,
                         pymatgen=True,
-                        get_reduced_structure=False)
+                        get_reduced_structure=False,
+                    )
 
-                    logger.debug('Lengths are %s, %s', len(P), len(Q))
+                    logger.debug("Lengths are %s, %s", len(P), len(Q))
                     rmsd_result = kabsch_rmsd(P, Q, translate=True)
-                    logger.debug('The Kabsch RMSD is %s', rmsd_result)
+                    logger.debug("The Kabsch RMSD is %s", rmsd_result)
                     if rmsd_result < threshold:
                         pairs.append(items)
             else:
                 if items[0] != items[1]:
                     _, P, _, Q = parse_periodic_case(
-                        scalar_feature_df.iloc[items[0]]['name'],
-                        scalar_feature_df.iloc[items[1]]['name'],
+                        scalar_feature_df.iloc[items[0]]["name"],
+                        scalar_feature_df.iloc[items[1]]["name"],
                         try_supercell,
-                        get_reduced_structure=False)
-                    logger.debug('Comparing %s and %s',
-                                 scalar_feature_df.iloc[items[0]]['name'],
-                                 scalar_feature_df.iloc[items[1]]['name'])
-                    logger.debug('Lengths are %s, %s', len(P), len(Q))
+                        get_reduced_structure=False,
+                    )
+                    logger.debug(
+                        "Comparing %s and %s",
+                        scalar_feature_df.iloc[items[0]]["name"],
+                        scalar_feature_df.iloc[items[1]]["name"],
+                    )
+                    logger.debug("Lengths are %s, %s", len(P), len(Q))
                     rmsd_result = kabsch_rmsd(P, Q, translate=True)
-                    logger.debug('The Kabsch RMSD is %s', rmsd_result)
+                    logger.debug("The Kabsch RMSD is %s", rmsd_result)
                     if rmsd_result < threshold:
                         pairs.append(items)
         return pairs
@@ -337,43 +352,41 @@ class RemoveDuplicates():
     def compare_graph_pair(self, items):
         nn_strategy = JmolNN()
         crystal_a = Structure.from_file(
-            self.scalar_feature_matrix.iloc[items[0]]['name'])
+            self.scalar_feature_matrix.iloc[items[0]]["name"]
+        )
         crystal_b = Structure.from_file(
-            self.scalar_feature_matrix.iloc[items[1]]['name'])
+            self.scalar_feature_matrix.iloc[items[1]]["name"]
+        )
         if self.try_supercell:
-            crystal_a, crystal_b = attempt_supercell_pymatgen(
-                crystal_a, crystal_b)
-        sgraph_a = StructureGraph.with_local_env_strategy(
-            crystal_a, nn_strategy)
-        sgraph_b = StructureGraph.with_local_env_strategy(
-            crystal_b, nn_strategy)
+            crystal_a, crystal_b = attempt_supercell_pymatgen(crystal_a, crystal_b)
+        sgraph_a = StructureGraph.with_local_env_strategy(crystal_a, nn_strategy)
+        sgraph_b = StructureGraph.with_local_env_strategy(crystal_b, nn_strategy)
         try:
             if sgraph_a == sgraph_b:
-                logger.debug('Found duplicate')
+                logger.debug("Found duplicate")
                 return items
         except ValueError:
-            logger.debug('Structures were probably not different')
+            logger.debug("Structures were probably not different")
             return False
 
     def compare_graph_pair_cached(self, items):
         nn_strategy = JmolNN()
-        crystal_a = self.reduced_structure_dict[self.scalar_feature_matrix.
-                                                iloc[items[0]]['name']]
-        crystal_b = self.reduced_structure_dict[self.scalar_feature_matrix.
-                                                iloc[items[1]]['name']]
+        crystal_a = self.reduced_structure_dict[
+            self.scalar_feature_matrix.iloc[items[0]]["name"]
+        ]
+        crystal_b = self.reduced_structure_dict[
+            self.scalar_feature_matrix.iloc[items[1]]["name"]
+        ]
         if self.try_supercell:
-            crystal_a, crystal_b = attempt_supercell_pymatgen(
-                crystal_a, crystal_b)
-        sgraph_a = StructureGraph.with_local_env_strategy(
-            crystal_a, nn_strategy)
-        sgraph_b = StructureGraph.with_local_env_strategy(
-            crystal_b, nn_strategy)
+            crystal_a, crystal_b = attempt_supercell_pymatgen(crystal_a, crystal_b)
+        sgraph_a = StructureGraph.with_local_env_strategy(crystal_a, nn_strategy)
+        sgraph_b = StructureGraph.with_local_env_strategy(crystal_b, nn_strategy)
         try:
             if sgraph_a == sgraph_b:
-                logger.debug('Found duplicate')
+                logger.debug("Found duplicate")
                 return items
         except ValueError:
-            logger.debug('Structures were probably not different')
+            logger.debug("Structures were probably not different")
             return False
 
     def compare_graphs(self, tupellist: list) -> list:
@@ -386,24 +399,25 @@ class RemoveDuplicates():
         Returns:
 
         """
-        logger.info('constructing and comparing structure graphs')
+        logger.info("constructing and comparing structure graphs")
         pairs = []
         with concurrent.futures.ProcessPoolExecutor() as executor:
             if not self.cached:
                 for _, result in tqdm(
-                        zip(tupellist,
-                            executor.map(self.compare_graph_pair, tupellist)),
-                        total=len(tupellist)):
+                    zip(tupellist, executor.map(self.compare_graph_pair, tupellist)),
+                    total=len(tupellist),
+                ):
                     logger.debug(result)
                     if result:
                         pairs.append(result)
             else:
                 for _, result in tqdm(
-                        zip(
-                            tupellist,
-                            executor.map(self.compare_graph_pair_cached,
-                                         tupellist)),
-                        total=len(tupellist)):
+                    zip(
+                        tupellist,
+                        executor.map(self.compare_graph_pair_cached, tupellist),
+                    ),
+                    total=len(tupellist),
+                ):
                     logger.debug(result)
                     if result:
                         pairs.append(result)
@@ -419,12 +433,13 @@ class RemoveDuplicates():
         self.hash_dict = defaultdict(list)
         with concurrent.futures.ProcessPoolExecutor() as executor:
             for structure in tqdm(
-                    zip(
-                        self.structure_list,
-                        executor.map(self.get_graph_hash_dict,
-                                     self.structure_list)),
-                    total=len(self.structure_list)):
-                logger.debug('getting hash for %s', structure)
+                zip(
+                    self.structure_list,
+                    executor.map(self.get_graph_hash_dict, self.structure_list),
+                ),
+                total=len(self.structure_list),
+            ):
+                logger.debug("getting hash for %s", structure)
 
         return self.hash_dict
 
@@ -436,57 +451,65 @@ class RemoveDuplicates():
 
         """
         try:
-            logger.info('running filtering workflow')
+            logger.info("running filtering workflow")
 
             self.get_reduced_structures()
 
             if not self.cached:
                 self.reduced_structure_list = get_structure_list(
-                    self.reduced_structure_dir)
-                logger.debug('we have %s reduced structures',
-                             len(self.reduced_structure_list))
+                    self.reduced_structure_dir
+                )
+                logger.debug(
+                    "we have %s reduced structures", len(self.reduced_structure_list)
+                )
 
                 self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df(
-                    self.reduced_structure_list)
+                    self.reduced_structure_list
+                )
             else:
-                logger.debug('we have %s reduced structures',
-                             len(self.reduced_structure_dict))
+                logger.debug(
+                    "we have %s reduced structures", len(self.reduced_structure_dict)
+                )
                 self.scalar_feature_matrix = RemoveDuplicates.get_scalar_df_cached(
-                    self.reduced_structure_dict)
+                    self.reduced_structure_dict
+                )
 
-            logger.debug('columns of dataframe are %s',
-                         self.scalar_feature_matrix.columns)
+            logger.debug(
+                "columns of dataframe are %s", self.scalar_feature_matrix.columns
+            )
 
             self.similar_composition_tuples = RemoveDuplicates.get_scalar_distance_matrix(
-                self.scalar_feature_matrix)
+                self.scalar_feature_matrix
+            )
 
-            if self.method == 'standard':
+            if self.method == "standard":
 
-                self.pairs = self.compare_graphs(
-                    self.similar_composition_tuples)
+                self.pairs = self.compare_graphs(self.similar_composition_tuples)
 
-            elif self.method == 'rmsd':
+            elif self.method == "rmsd":
                 self.pairs = RemoveDuplicates.compare_rmsd(
                     tupellist=self.similar_composition_tuples,
                     scalar_feature_df=self.scalar_feature_matrix,
                     try_supercell=self.try_supercell,
-                    reduced_structure_dict=self.reduced_structure_dict)
+                    reduced_structure_dict=self.reduced_structure_dict,
+                )
 
-            elif self.method == 'rmsd_graph':
+            elif self.method == "rmsd_graph":
                 self.rmsd_pairs = RemoveDuplicates.compare_rmsd(
                     tupellist=self.similar_composition_tuples,
                     scalar_feature_df=self.scalar_feature_matrix,
                     try_supercell=self.try_supercell,
-                    reduced_structure_dict=self.reduced_structure_dict)
+                    reduced_structure_dict=self.reduced_structure_dict,
+                )
 
                 self.pairs = self.compare_graphs(self.rmsd_pairs)
 
-            elif self.method == 'hash':
+            elif self.method == "hash":
                 raise NotImplementedError
                 # RemoveDuplicates.get_graph_hash_dict(self.structure_list)
         finally:
             if self.tempdirpath and os.path.exists(self.tempdirpath):
-                logger.debug('now i am cleaning up')
+                logger.debug("now i am cleaning up")
                 shutil.rmtree(self.tempdirpath)
 
     @staticmethod
@@ -514,10 +537,8 @@ class RemoveDuplicates():
             if self.pairs:
                 duplicates = []
                 for items in self.pairs:
-                    name1 = Path(
-                        self.scalar_feature_matrix.iloc[items[0]]['name']).name
-                    name2 = Path(
-                        self.scalar_feature_matrix.iloc[items[1]]['name']).name
+                    name1 = Path(self.scalar_feature_matrix.iloc[items[0]]["name"]).name
+                    name2 = Path(self.scalar_feature_matrix.iloc[items[1]]["name"]).name
                     duplicates.append((name1, name2))
             else:
                 duplicates = 0
@@ -525,27 +546,27 @@ class RemoveDuplicates():
             duplicates = None
         return duplicates
 
-    def inspect_duplicates(self, mode: str = 'ase'):
-        if mode == 'ase':
+    def inspect_duplicates(self, mode: str = "ase"):
+        if mode == "ase":
             if self.pairs:
                 for items in self.pairs:
                     fig, axarr = plt.subplots(1, 2, figsize=(15, 5))
                     plot_atoms(
-                        read(
-                            self.scalar_feature_matrix.iloc[items[0]]['name']),
-                        axarr[0])
+                        read(self.scalar_feature_matrix.iloc[items[0]]["name"]),
+                        axarr[0],
+                    )
                     plot_atoms(
-                        read(
-                            self.scalar_feature_matrix.iloc[items[1]]['name']),
-                        axarr[1])
+                        read(self.scalar_feature_matrix.iloc[items[1]]["name"]),
+                        axarr[1],
+                    )
             else:
-                logger.info('no duplicates to plot')
+                logger.info("no duplicates to plot")
 
     def remove_duplicates(self):
         try:
             for items in self.pairs:
-                os.remove(self.scalar_feature_matrix.iloc[items[0]]['name'])
+                os.remove(self.scalar_feature_matrix.iloc[items[0]]["name"])
 
             # Should we now also clean the pair list?
         except Exception:
-            logger.error('Could not delete duplicates')
+            logger.error("Could not delete duplicates")

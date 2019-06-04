@@ -43,6 +43,7 @@ import matplotlib.pyplot as plt
 from scipy import ndimage
 import concurrent.futures
 from functools import partial
+from numba import jit
 
 logger = logging.getLogger("RemoveDuplicates")
 logger.setLevel(logging.DEBUG)
@@ -80,6 +81,20 @@ class Statistics:
             return sgraph_a.diff(sgraph_b, strict=False)["dist"]
         except Exception:
             return np.nan
+
+    @staticmethod
+    @jit
+    def euclidean_distance(u: np.ndarray, v: np.ndarray) -> float:
+        """
+
+        Args:
+            u:
+            v:
+
+        Returns:
+
+        """
+        return np.linalg.norm(u-v)
 
     @staticmethod
     def _randomized_graphs(
@@ -244,19 +259,26 @@ class Statistics:
     def optimal_knn(data, max_cluster: int = 20):
         """
         use silhouette scores to find the optimal number of clusters.
-
+        we use silhouette scores as they are easier to use in a algorithm
+        than the "elbow criterion"
+        
         Args:
-            data:
-            max_cluster:
+            data (np.array): data matrix
+            max_cluster (int): maximum number of clusters. Optimization will happen
+                for all cluster numbers k in (2, min(len(data), max_cluster))
         Returns:
 
         """
         from sklearn.metrics import silhouette_score
         from sklearn.preprocessing import StandardScaler
 
+        logger.debug('searching for optimal knn clustering')
         silhouette_scores = []
         n_clusters = []
+
+        # avoid that k > len(data)
         upper_boundary = np.min([len(data), max_cluster])
+
         sc = StandardScaler()
         data = sc.fit_transform(data)
         for n_cluster in range(2, upper_boundary):
@@ -267,7 +289,9 @@ class Statistics:
             n_clusters.append(n_cluster)
 
         optimal_n_cluster = np.argmax(silhouette_scores)
-        kmeans = KMeans(n_cluster=optimal_n_cluster).fit(data)
+        kmeans = KMeans(n_clusters=optimal_n_cluster).fit(data)
+
+        logger.info('found optimal knn clustering with %s clusters', optimal_n_cluster)
         return kmeans, optimal_n_cluster
 
     @staticmethod
@@ -715,7 +739,8 @@ class DistComparison(Statistics):
 
             Ideally, one would want the outer metrics to be similar to the inner metrics.
 
-            To avoid influences from from different scales/units, the data is standardized by default. 
+            To avoid influences from from different scales/units, the data is standardized by default.
+
         Returns:
             dict with the metrics (floats)
         """
@@ -740,7 +765,7 @@ class DistComparison(Statistics):
             sc.fit_transform(np.transpose(np.array(self.property_list_2)))
         )
 
-        distance_clustering_1 = euclidean(
+        distance_clustering_1 = self.euclidean_distance(
             knn_1.cluster_centers_, kmeans_1.cluster_centers_
         )
 
@@ -760,8 +785,8 @@ class DistComparison(Statistics):
             sc.fit_transform(np.transpose(np.array(self.property_list_1)))
         )
 
-        distance_clustering_2 = euclidean(
-            knn_1.cluster_centers_, kmeans_1.cluster_centers_
+        distance_clustering_2 = self.euclidean_distance(
+            knn_2.cluster_centers_, kmeans_2.cluster_centers_
         )
 
         result_dict = {
