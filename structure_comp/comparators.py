@@ -292,7 +292,7 @@ class Statistics:
             silhouette_scores.append(sil_coeff)
             n_clusters.append(n_cluster)
 
-        optimal_n_cluster = np.argmax(silhouette_scores)
+        optimal_n_cluster = n_clusters[np.argmax(silhouette_scores)]
         kmeans = KMeans(n_clusters=optimal_n_cluster).fit(data)
 
         logger.info("found optimal knn clustering with %s clusters", optimal_n_cluster)
