@@ -94,7 +94,7 @@ class Statistics:
         Returns:
 
         """
-        return np.linalg.norm(u-v)
+        return np.linalg.norm(u - v)
 
     @staticmethod
     def _randomized_graphs(
@@ -261,7 +261,7 @@ class Statistics:
         use silhouette scores to find the optimal number of clusters.
         we use silhouette scores as they are easier to use in a algorithm
         than the "elbow criterion"
-        
+
         Args:
             data (np.array): data matrix
             max_cluster (int): maximum number of clusters. Optimization will happen
@@ -272,7 +272,7 @@ class Statistics:
         from sklearn.metrics import silhouette_score
         from sklearn.preprocessing import StandardScaler
 
-        logger.debug('searching for optimal knn clustering')
+        logger.debug("searching for optimal knn clustering")
         silhouette_scores = []
         n_clusters = []
 
@@ -291,7 +291,7 @@ class Statistics:
         optimal_n_cluster = np.argmax(silhouette_scores)
         kmeans = KMeans(n_clusters=optimal_n_cluster).fit(data)
 
-        logger.info('found optimal knn clustering with %s clusters', optimal_n_cluster)
+        logger.info("found optimal knn clustering with %s clusters", optimal_n_cluster)
         return kmeans, optimal_n_cluster
 
     @staticmethod
@@ -719,7 +719,7 @@ class DistComparison(Statistics):
         self.rmsds = distances
         return distances
 
-    def cluster_comparison(self):
+    def cluster_comparison(self, n_runs: int = 4):
         """
         Performs distance measurements based on (optimal) knn clustering. The following metrics
         are computed:
@@ -740,6 +740,8 @@ class DistComparison(Statistics):
             Ideally, one would want the outer metrics to be similar to the inner metrics.
 
             To avoid influences from from different scales/units, the data is standardized by default.
+            As the outcome of the knn clusterings is randomized, especically if the clustering is bad, we
+            bootstrap the metrics by default.
 
         Returns:
             dict with the metrics (floats)
@@ -748,72 +750,166 @@ class DistComparison(Statistics):
         from scipy.spatial.distance import euclidean
         from scipy.spatial import KDTree
 
-        knn_1, n_cluster_1 = self.optimal_knn(
-            np.transpose(np.array(self.property_list_1))
-        )
+        n_cluster_1s = []
+        n_cluster_2s = []
 
-        sc = StandardScaler()
-        tree_1 = KDTree(knn_1.cluster_centers_)
-        k_d_1_1, _ = tree_1.query(
-            sc.fit_transform(np.transpose(np.array(self.property_list_1))), k=1
-        )
-        k_d_1_2, _ = tree_1.query(
-            sc.fit_transform(np.transpose(np.array(self.property_list_2))), k=1
-        )
+        k_d_1_1s_min = []
+        k_d_1_2s_min = []
+        k_d_2_2s_min = []
+        k_d_2_1s_min = []
 
-        kmeans_1 = KMeans(n_clusters=n_cluster_1).fit(
-            sc.fit_transform(np.transpose(np.array(self.property_list_2)))
-        )
+        k_d_1_1s_max = []
+        k_d_1_2s_max = []
+        k_d_2_2s_max = []
+        k_d_2_1s_max = []
 
-        distance_clustering_1 = self.euclidean_distance(
-            knn_1.cluster_centers_, kmeans_1.cluster_centers_
-        )
+        k_d_1_1s_mean = []
+        k_d_1_2s_mean = []
+        k_d_2_2s_mean = []
+        k_d_2_1s_mean = []
 
-        knn_2, n_cluster_2 = self.optimal_knn(
-            np.transpose(np.array(self.property_list_2))
-        )
+        k_d_1_1s_median = []
+        k_d_1_2s_median = []
+        k_d_2_2s_median = []
+        k_d_2_1s_median = []
 
-        tree_2 = KDTree(knn_2.cluster_centers_)
-        k_d_2_2, _ = tree_2.query(
-            sc.fit_transform(np.transpose(np.array(self.property_list_2))), k=1
-        )
-        k_d_2_1, _ = tree_2.query(
-            sc.fit_transform(np.transpose(np.array(self.property_list_1))), k=1
-        )
+        k_d_1_1s_trimean = []
+        k_d_1_2s_trimean = []
+        k_d_2_2s_trimean = []
+        k_d_2_1s_trimean = []
 
-        kmeans_2 = KMeans(n_clusters=n_cluster_2).fit(
-            sc.fit_transform(np.transpose(np.array(self.property_list_1)))
-        )
+        distance_clustering_1s = []
+        distance_clustering_2s = []
 
-        distance_clustering_2 = self.euclidean_distance(
-            knn_2.cluster_centers_, kmeans_2.cluster_centers_
-        )
+        for i in range(n_runs):
+            knn_1, n_cluster_1 = self.optimal_knn(
+                np.transpose(np.array(self.property_list_1))
+            )
+
+            n_cluster_1s.append(n_cluster_1)
+
+            sc = StandardScaler()
+            tree_1 = KDTree(knn_1.cluster_centers_)
+            k_d_1_1, _ = tree_1.query(
+                sc.fit_transform(np.transpose(np.array(self.property_list_1))), k=1
+            )
+            k_d_1_2, _ = tree_1.query(
+                sc.fit_transform(np.transpose(np.array(self.property_list_2))), k=1
+            )
+
+            k_d_1_1s_min.append(np.min(k_d_1_1))
+            k_d_1_2s_min.append(np.min(k_d_1_2))
+
+            k_d_1_1s_max.append(np.max(k_d_1_1))
+            k_d_1_2s_max.append(np.max(k_d_1_2))
+
+            k_d_1_1s_mean.append(np.mean(k_d_1_1))
+            k_d_1_2s_mean.append(np.mean(k_d_1_2))
+
+            k_d_1_1s_median.append(np.median(k_d_1_1))
+            k_d_1_2s_median.append(np.median(k_d_1_2))
+
+            k_d_1_1s_trimean.append(self.trimean(k_d_1_1))
+            k_d_1_2s_trimean.append(self.trimean(k_d_1_2))
+
+            kmeans_1 = KMeans(n_clusters=n_cluster_1).fit(
+                sc.fit_transform(np.transpose(np.array(self.property_list_2)))
+            )
+
+            distance_clustering_1 = self.euclidean_distance(
+                knn_1.cluster_centers_, kmeans_1.cluster_centers_
+            )
+
+            distance_clustering_1s.append(distance_clustering_1)
+
+            knn_2, n_cluster_2 = self.optimal_knn(
+                np.transpose(np.array(self.property_list_2))
+            )
+
+            n_cluster_2s.append(n_cluster_2)
+
+            tree_2 = KDTree(knn_2.cluster_centers_)
+            k_d_2_2, _ = tree_2.query(
+                sc.fit_transform(np.transpose(np.array(self.property_list_2))), k=1
+            )
+            k_d_2_1, _ = tree_2.query(
+                sc.fit_transform(np.transpose(np.array(self.property_list_1))), k=1
+            )
+
+            k_d_2_2s_min.append(np.min(k_d_2_2))
+            k_d_2_1s_min.append(np.min(k_d_2_1))
+
+            k_d_2_2s_max.append(np.max(k_d_2_2))
+            k_d_2_1s_max.append(np.max(k_d_2_1))
+
+            k_d_2_2s_mean.append(np.mean(k_d_2_2))
+            k_d_2_1s_mean.append(np.mean(k_d_2_1))
+
+            k_d_2_2s_median.append(np.median(k_d_2_2))
+            k_d_2_1s_median.append(np.median(k_d_2_1))
+
+            k_d_2_2s_trimean.append(self.trimean(k_d_2_2))
+            k_d_2_1s_trimean.append(self.trimean(k_d_2_1))
+
+            kmeans_2 = KMeans(n_clusters=n_cluster_2).fit(
+                sc.fit_transform(np.transpose(np.array(self.property_list_1)))
+            )
+
+            distance_clustering_2 = self.euclidean_distance(
+                knn_2.cluster_centers_, kmeans_2.cluster_centers_
+            )
+
+            distance_clustering_2s.append(distance_clustering_2)
 
         result_dict = {
-            "n_cluster_1": n_cluster_1,
-            "n_cluster_2": n_cluster_2,
-            "euclidean_1": distance_clustering_1,
-            "euclidean_2": distance_clustering_2,
-            "max_min_inner_1": np.max(k_d_1_1),
-            "max_min_outer_1": np.max(k_d_1_2),
-            "max_min_inner_2": np.max(k_d_2_2),
-            "max_min_outer_2": np.max(k_d_2_1),
-            "mean_min_inner_1": np.mean(k_d_1_1),
-            "mean_min_outer_1": np.mean(k_d_1_2),
-            "mean_min_inner_2": np.mean(k_d_2_2),
-            "mean_min_outer_2": np.mean(k_d_2_1),
-            "median_min_inner_1": np.mean(k_d_1_1),
-            "median_min_outer_1": np.mean(k_d_1_2),
-            "median_min_inner_2": np.mean(k_d_2_2),
-            "median_min_outer_2": np.mean(k_d_2_1),
-            "trimean_min_inner_1": self.trimean(k_d_1_1),
-            "trimean_min_outer_1": self.trimean(k_d_1_2),
-            "trimean_min_inner_2": self.trimean(k_d_2_2),
-            "trimean_min_outer_2": self.trimean(k_d_2_1),
-            "min_min_inner_1": np.min(k_d_1_1),
-            "min_min_outer_1": np.min(k_d_1_2),
-            "min_min_inner_2": np.min(k_d_2_2),
-            "min_min_outer_2": np.min(k_d_2_1),
+            "mean_n_cluster_1": np.mean(n_cluster_1s),
+            "mean_n_cluster_2": np.mean(n_cluster_2s),
+            "mean_euclidean_1": np.mean(distance_clustering_1s),
+            "mean_euclidean_2": np.mean(distance_clustering_2s),
+            "mean_max_min_inner_1": np.mean(k_d_1_1),
+            "mean_max_min_outer_1": np.mean(k_d_1_2),
+            "mean_max_min_inner_2": np.mean(k_d_2_2),
+            "mean_max_min_outer_2": np.mean(k_d_2_1),
+            "mean_mean_min_inner_1": np.mean(k_d_1_1),
+            "mean_mean_min_outer_1": np.mean(k_d_1_2),
+            "mean_mean_min_inner_2": np.mean(k_d_2_2),
+            "mean_mean_min_outer_2": np.mean(k_d_2_1),
+            "mean_median_min_inner_1": np.mean(k_d_1_1),
+            "mean_median_min_outer_1": np.mean(k_d_1_2),
+            "mean_median_min_inner_2": np.mean(k_d_2_2),
+            "mean_median_min_outer_2": np.mean(k_d_2_1),
+            "mean_trimean_min_inner_1": np.mean(k_d_1_1),
+            "mean_trimean_min_outer_1": np.mean(k_d_1_2),
+            "mean_trimean_min_inner_2": np.mean(k_d_2_2),
+            "mean_trimean_min_outer_2": np.mean(k_d_2_1),
+            "mean_min_min_inner_1": np.mean(k_d_1_1),
+            "mean_min_min_outer_1": np.mean(k_d_1_2),
+            "mean_min_min_inner_2": np.mean(k_d_2_2),
+            "mean_min_min_outer_2": np.mean(k_d_2_1),
+            "std_n_cluster_1": np.std(n_cluster_1s),
+            "std_n_cluster_2": np.std(n_cluster_2s),
+            "std_euclidean_1": np.std(distance_clustering_1s),
+            "std_euclidean_2": np.std(distance_clustering_2s),
+            "std_max_min_inner_1": np.std(k_d_1_1),
+            "std_max_min_outer_1": np.std(k_d_1_2),
+            "std_max_min_inner_2": np.std(k_d_2_2),
+            "std_max_min_outer_2": np.std(k_d_2_1),
+            "std_mean_min_inner_1": np.std(k_d_1_1),
+            "std_mean_min_outer_1": np.std(k_d_1_2),
+            "std_mean_min_inner_2": np.std(k_d_2_2),
+            "std_mean_min_outer_2": np.std(k_d_2_1),
+            "std_median_min_inner_1": np.std(k_d_1_1),
+            "std_median_min_outer_1": np.std(k_d_1_2),
+            "std_median_min_inner_2": np.std(k_d_2_2),
+            "std_median_min_outer_2": np.std(k_d_2_1),
+            "std_trimean_min_inner_1": np.std(k_d_1_1),
+            "std_trimean_min_outer_1": np.std(k_d_1_2),
+            "std_trimean_min_inner_2": np.std(k_d_2_2),
+            "std_trimean_min_outer_2": np.std(k_d_2_1),
+            "std_min_min_inner_1": np.std(k_d_1_1),
+            "std_min_min_outer_1": np.std(k_d_1_2),
+            "std_min_min_inner_2": np.std(k_d_2_2),
+            "std_min_min_outer_2": np.std(k_d_2_1),
         }
 
         return result_dict
