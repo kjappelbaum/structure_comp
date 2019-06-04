@@ -273,7 +273,7 @@ def parse_periodic_case(file_1,
     atomic_symbols_2 = a2.get_chemical_symbols()
     positions_2 = a2.get_positions()
 
-    return atomic_symbols_1, positions_1, atomic_symbols_2, positions_2
+    return np.array(atomic_symbols_1), np.array(positions_1), np.array(atomic_symbols_2), np.array(positions_2)
 
 
 def attempt_supercell(atoms1, atoms2):

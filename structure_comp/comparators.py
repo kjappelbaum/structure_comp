@@ -70,6 +70,7 @@ class Statistics:
         Returns:
             Jaccard distance between two random structure graphs
         """
+        logger.debug("i am in the graph comparison routine")
         try:
             random_selection_1 = random.sample(structure_list_a, 1)[0]
             random_selection_2 = random.sample(structure_list_b, 1)[0]
@@ -211,7 +212,8 @@ class Statistics:
         return diffs
 
     @staticmethod
-    def _get_one_rmsd(structure_list_a, structure_list_b, _):
+    def _get_one_rmsd(structure_list_a: list, structure_list_b: list, _) -> float:
+        logger.debug('i am in the _get_one_rmsd routine')
         try:
             random_selection_1 = random.sample(structure_list_a, 1)[0]
             random_selection_2 = random.sample(structure_list_b, 1)[0]
@@ -749,7 +751,6 @@ class DistComparison(Statistics):
             dict with the metrics (floats)
         """
         from sklearn.preprocessing import StandardScaler
-        from scipy.spatial.distance import euclidean
         from scipy.spatial import KDTree
 
         n_cluster_1s = []
