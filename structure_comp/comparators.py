@@ -923,7 +923,7 @@ class DistComparison(Statistics):
         return result_dict
 
     @staticmethod
-    def _single_t(pl_1, pl_2, plot: bool = False):
+    def _single_qq_test(pl_1, pl_2, plot: bool = False):
 
         if len(pl_1) > len(pl_2):
             property_list_1 = pl_1
