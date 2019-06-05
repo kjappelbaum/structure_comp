@@ -596,7 +596,7 @@ class DistComparison(Statistics):
 
                 for feature in self.feature_names:
                     _tmp_property_list_1.append(
-                        self.property_list_1[feature].values.tolist()
+                        self.property_list_1[feature].values.astype(np.float32).tolist()
                     )
                 self.property_list_1 = _tmp_property_list_1
 
@@ -918,7 +918,7 @@ class DistComparison(Statistics):
         return result_dict
 
     @staticmethod
-    def _single_qq_test(pl_1, pl_2, plot: bool = False):
+    def _single_t(pl_1, pl_2, plot: bool = False):
 
         if len(pl_1) > len(pl_2):
             property_list_1 = pl_1
@@ -958,6 +958,7 @@ class DistComparison(Statistics):
         pearson = pearsonr(quantiles1, quantiles2)
 
         if plot:
+            logger.debug("plotting qq plot")
             plt.scatter(quantiles1, quantiles2, label="qq")
             plt.plot(
                 [minval - minval * 0.1, maxval + maxval * 0.1],
@@ -1051,6 +1052,7 @@ class DistComparison(Statistics):
         ToDo:
             - use instead of smaller standard deviation maybe joined one?
         """
+        logger.debug("calculating mutual information score")
         EPS = np.finfo(float).eps
         width_x = max(x) - min(x)
         width_y = max(y) - min(y)
