@@ -387,7 +387,7 @@ class DistStatistic(Statistics):
                 self.property_list = self.property_list._get_numeric_data()
                 for feature in self.feature_names:
                     _tmp_property_list.append(
-                        self.property_list[feature].values.tolist()
+                        self.property_list[feature].values.astype(np.float32).tolist()
                     )
                 self.property_list = _tmp_property_list
 
@@ -608,7 +608,7 @@ class DistComparison(Statistics):
 
                 for feature in self.feature_names:
                     _tmp_property_list_2.append(
-                        self.property_list_2[feature].values.tolist()
+                        self.property_list_2[feature].values.astype(np.float32).tolist()
                     )
                 self.property_list_2 = _tmp_property_list_2
 
@@ -1134,7 +1134,7 @@ class DistComparison(Statistics):
     @staticmethod
     def _gaussian_kernel(z, length):
         z = z[:, :, None]
-        pre_exp = ((z - z.T) ** 2).sum(axis=1)
+        pre_exp = (np.square((z - np.transpose(z)))).sum(axis=1)
         return np.exp(-(pre_exp / length))
 
     @staticmethod
