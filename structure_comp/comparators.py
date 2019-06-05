@@ -384,7 +384,7 @@ class DistStatistic(Statistics):
                 self.feature_names = self.property_list.columns.values
                 logger.debug("will use %s as feature names", self.feature_names)
                 _tmp_property_list = []
-
+                self.property_list = self.property_list._get_numeric_data()
                 for feature in self.feature_names:
                     _tmp_property_list.append(
                         self.property_list[feature].values.tolist()
@@ -588,8 +588,11 @@ class DistComparison(Statistics):
             # Check if input is a dataframe. If this is the case, extract the column names
             # and convert it to list of lists
             if isinstance(property_list_1, pd.DataFrame):
-                logger.debug("Input seems to be a dataframe")
+                logger.debug(
+                    "Input seems to be a dataframe, will only use numeric data"
+                )
                 self.list_of_list_mode = True
+                self.property_list_1 = self.property_list_1._get_numeric_data()
                 self.feature_names = self.property_list_1.columns.values
                 logger.debug("will use %s as feature names", self.feature_names)
                 _tmp_property_list_1 = []
@@ -601,6 +604,8 @@ class DistComparison(Statistics):
                 self.property_list_1 = _tmp_property_list_1
 
                 _tmp_property_list_2 = []
+                self.property_list_2 = self.property_list_2._get_numeric_data()
+
                 for feature in self.feature_names:
                     _tmp_property_list_2.append(
                         self.property_list_2[feature].values.tolist()
