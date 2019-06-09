@@ -964,7 +964,7 @@ class DistComparison(Statistics):
 
         if plot:
             logger.debug("plotting qq plot")
-            ax = plt.subplots(111)
+            ax = plt.subplot(111)
             ax.scatter(quantiles1, quantiles2, label="qq")
             ax.plot(
                 [minval - minval * 0.1, maxval + maxval * 0.1],
