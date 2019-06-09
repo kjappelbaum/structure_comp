@@ -964,14 +964,15 @@ class DistComparison(Statistics):
 
         if plot:
             logger.debug("plotting qq plot")
-            plt.scatter(quantiles1, quantiles2, label="qq")
-            plt.plot(
+            ax = plt.subplots(111)
+            ax.scatter(quantiles1, quantiles2, label="qq")
+            ax.plot(
                 [minval - minval * 0.1, maxval + maxval * 0.1],
                 [minval - minval * 0.1, maxval + maxval * 0.1],
                 "--k",
                 label="diagonal",
             )
-            plt.plot(quantiles1, predictions, label="Huber regression")
+            ax.plot(quantiles1, predictions, label="Huber regression")
             # plt.legend()
 
         results_dict = {
@@ -1074,7 +1075,7 @@ class DistComparison(Statistics):
         else:
             sigma = sigma_ratio * stdev_y
 
-        logger.debug("using %s bins and sigma %s", binum, sigma)
+        logger.debug("using %s bins and sigma %s", binnum, sigma)
 
         if len(x) > len(y):
             y = random.sample(x, len(y))
