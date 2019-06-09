@@ -1074,6 +1074,8 @@ class DistComparison(Statistics):
         else:
             sigma = sigma_ratio * stdev_y
 
+        logger.debug("using %s bins and sigma %s", binum, sigma)
+
         if len(x) > len(y):
             y = random.sample(x, len(y))
         elif len(y) > len(x):
