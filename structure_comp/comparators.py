@@ -1274,6 +1274,8 @@ class DistComparison(Statistics):
                     self.properties_statistics[self.feature_names[i]] = results_dict
                     out_dict[self.feature_names[i]] = results_dict
 
+                # ToDo: Implement here a random subset selection for huge matrices
+                # to avoid memory errors. 
                 mmd, mmd_p = DistComparison.mmd_test(
                     np.array(self.property_list_1).T, np.array(self.property_list_2).T
                 )
