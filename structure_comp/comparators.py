@@ -1217,10 +1217,28 @@ class DistComparison(Statistics):
             "will be implemented in a further release"
         )
 
-        mmd, mmd_p = DistComparison.mmd_test(
-            np.array(property_list_1).reshape(-1, 1),
-            np.array(property_list_2).reshape(-1, 1),
-        )
+        if len(np.array(property_list_1)) * np.array(property_list_2) > 1000000:
+            _min_len = np.min(
+                len(self.property_list_1[0]), len(self.property_list_2[0])
+            )
+            MAX_NUM_POINTS = 100000
+            random_indices = np.random.choice(
+                _min_len, np.min(_min_len, MAX_NUM_POINTS), replace=False
+            )
+
+            logger.warning(
+                "using inefficient MMD implementation, need to select subset due to memory reasons"
+            )
+            # ToDo: Maybe implement a general fallback function that does this, when we catch memory error
+            mmd, mmd_p = DistComparison.mmd_test(
+                np.array(property_list_1).reshape(-1, 1)[random_indices, :],
+                np.array(property_list_2).reshape(-1, 1)[random_indices, :],
+            )
+        else:
+            mmd, mmd_p = DistComparison.mmd_test(
+                np.array(property_list_1).reshape(-1, 1),
+                np.array(property_list_2).reshape(-1, 1),
+            )
 
         # Mann-Whitney U
         mwu = mannwhitneyu(property_list_1, property_list_2)
