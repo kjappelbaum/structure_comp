@@ -1168,11 +1168,14 @@ class DistComparison(Statistics):
             x_kernel = x
             y_kernel = y
 
+        n_samples = min([10000, x.shape[0] - 1, y.shape[0] - 1])
+        indices = np.random.choice(n_samples, n_samples, replace=False)
+        x_kernel, y_kernel = x_kernel[indices], y_kernel[indices]
         print(x_kernel.shape, y_kernel.shape)
 
-        rbf_width = DistComparison._optimal_kernel_width((x_kernel, y_kernel)) / 4.0
+        rbf_width = DistComparison._optimal_kernel_width((x_kernel, y_kernel))
         mmd_array = DistComparison._mmd(x, y, rbf_width)
-        n_samples = min([500, x.shape[0], y.shape[0]])
+
         null_dist = DistComparison._mmd_null(x, y, rbf_width, n_samples)
         p_value = (null_dist[:, None] > mmd_array).sum() / float(n_samples)
 
@@ -1218,13 +1221,14 @@ class DistComparison(Statistics):
         )
 
         try:
+            print(len(property_list_1), len(property_list_2))
             mmd, mmd_p = DistComparison.mmd_test(
                 np.array(property_list_1).reshape(-1, 1),
                 np.array(property_list_2).reshape(-1, 1),
             )
 
         except MemoryError:
-            _min_len = np.min([len(property_list_1), len(property_list_2)])
+            _min_len = np.min([len(property_list_1) - 1, len(property_list_2) - 1])
             MAX_NUM_POINTS = 100000
             random_indices = np.random.choice(
                 _min_len, np.min([_min_len, MAX_NUM_POINTS]), replace=False
@@ -1234,6 +1238,7 @@ class DistComparison(Statistics):
                 "using inefficient MMD implementation, need to select subset due to memory reasons, min_len is %s",
                 _min_len,
             )
+
             # ToDo: Maybe implement a general fallback function that does this, when we catch memory error
             mmd, mmd_p = DistComparison.mmd_test(
                 np.array(property_list_1).reshape(-1, 1)[random_indices],
@@ -1294,6 +1299,9 @@ class DistComparison(Statistics):
 
                 # ToDo: Implement here a random subset selection for huge matrices
                 # to avoid memory errors.
+                logger.info(
+                    "finished with feature-wise comparison. Calcualting global comparison"
+                )
                 try:
                     mmd, mmd_p = DistComparison.mmd_test(
                         np.array(self.property_list_1).T,
@@ -1308,7 +1316,10 @@ class DistComparison(Statistics):
                         "caught memory error, reducing the size of the property list"
                     )
                     _min_len = np.min(
-                        [len(self.property_list_1[0]), len(self.property_list_2[0])]
+                        [
+                            len(self.property_list_1[0]) - 1,
+                            len(self.property_list_2[0]) - 1,
+                        ]
                     )
                     MAX_NUM_POINTS = 20000
                     random_indices = np.random.choice(
