@@ -1217,27 +1217,27 @@ class DistComparison(Statistics):
             "will be implemented in a further release"
         )
 
-        if len(np.array(property_list_1)) * np.array(property_list_2) > 1000000:
-            _min_len = np.min(
-                len(self.property_list_1[0]), len(self.property_list_2[0])
-            )
-            MAX_NUM_POINTS = 100000
-            random_indices = np.random.choice(
-                _min_len, np.min(_min_len, MAX_NUM_POINTS), replace=False
-            )
-
-            logger.warning(
-                "using inefficient MMD implementation, need to select subset due to memory reasons"
-            )
-            # ToDo: Maybe implement a general fallback function that does this, when we catch memory error
-            mmd, mmd_p = DistComparison.mmd_test(
-                np.array(property_list_1).reshape(-1, 1)[random_indices, :],
-                np.array(property_list_2).reshape(-1, 1)[random_indices, :],
-            )
-        else:
+        try:
             mmd, mmd_p = DistComparison.mmd_test(
                 np.array(property_list_1).reshape(-1, 1),
                 np.array(property_list_2).reshape(-1, 1),
+            )
+
+        except MemoryError:
+            _min_len = np.min([len(property_list_1), len(property_list_2)])
+            MAX_NUM_POINTS = 100000
+            random_indices = np.random.choice(
+                _min_len, np.min([_min_len, MAX_NUM_POINTS]), replace=False
+            )
+
+            logger.warning(
+                "using inefficient MMD implementation, need to select subset due to memory reasons, min_len is %s",
+                _min_len,
+            )
+            # ToDo: Maybe implement a general fallback function that does this, when we catch memory error
+            mmd, mmd_p = DistComparison.mmd_test(
+                np.array(property_list_1).reshape(-1, 1)[random_indices],
+                np.array(property_list_2).reshape(-1, 1)[random_indices],
             )
 
         # Mann-Whitney U
@@ -1294,18 +1294,25 @@ class DistComparison(Statistics):
 
                 # ToDo: Implement here a random subset selection for huge matrices
                 # to avoid memory errors.
-                if (
-                    np.max(len(self.property_list_1), len(self.property_list_2))
-                    * np.max(len(self.property_list_1[0]), len(self.property_list_2[0]))
-                    > 100000
-                ):
-                    logger.debug("reducing the size of the property list")
+                try:
+                    mmd, mmd_p = DistComparison.mmd_test(
+                        np.array(self.property_list_1).T,
+                        np.array(self.property_list_2).T,
+                    )
+                    overall_statistics = {"mmd_statistic": mmd, "mmd_p_value": mmd_p}
+                    self.properties_statistics["global"] = overall_statistics
+                    out_dict["global"] = overall_statistics
+
+                except MemoryError:
+                    logger.warning(
+                        "caught memory error, reducing the size of the property list"
+                    )
                     _min_len = np.min(
-                        len(self.property_list_1[0]), len(self.property_list_2[0])
+                        [len(self.property_list_1[0]), len(self.property_list_2[0])]
                     )
                     MAX_NUM_POINTS = 20000
                     random_indices = np.random.choice(
-                        _min_len, np.min(_min_len, MAX_NUM_POINTS), replace=False
+                        _min_len, np.min([_min_len, MAX_NUM_POINTS]), replace=False
                     )
 
                     mmd, mmd_p = DistComparison.mmd_test(
@@ -1316,15 +1323,6 @@ class DistComparison(Statistics):
                     self.properties_statistics["global"] = overall_statistics
                     out_dict["global"] = overall_statistics
 
-                else:
-                    logger.debug("did not reduce size of the property lists")
-                    mmd, mmd_p = DistComparison.mmd_test(
-                        np.array(self.property_list_1).T,
-                        np.array(self.property_list_2).T,
-                    )
-                    overall_statistics = {"mmd_statistic": mmd, "mmd_p_value": mmd_p}
-                    self.properties_statistics["global"] = overall_statistics
-                    out_dict["global"] = overall_statistics
             return out_dict
         else:
             out_dict = {}
