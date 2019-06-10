@@ -1281,8 +1281,9 @@ class DistComparison(Statistics):
                     * np.max(len(self.property_list_1[0]), len(self.property_list_2[0]))
                     > 100000
                 ):
+                    logger.debug("reducing the size of the property list")
                     _min_len = np.min(
-                        len(self.property_list_1), len(self.property_list_2)
+                        len(self.property_list_1[0]), len(self.property_list_2[0])
                     )
                     MAX_NUM_POINTS = 20000
                     random_indices = np.random.choice(
@@ -1298,6 +1299,7 @@ class DistComparison(Statistics):
                     out_dict["global"] = overall_statistics
 
                 else:
+                    logger.debug("did not reduce size of the property lists")
                     mmd, mmd_p = DistComparison.mmd_test(
                         np.array(self.property_list_1).T,
                         np.array(self.property_list_2).T,
