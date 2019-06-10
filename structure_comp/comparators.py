@@ -1275,13 +1275,37 @@ class DistComparison(Statistics):
                     out_dict[self.feature_names[i]] = results_dict
 
                 # ToDo: Implement here a random subset selection for huge matrices
-                # to avoid memory errors. 
-                mmd, mmd_p = DistComparison.mmd_test(
-                    np.array(self.property_list_1).T, np.array(self.property_list_2).T
-                )
-                overall_statistics = {"mmd_statistic": mmd, "mmd_p_value": mmd_p}
-                self.properties_statistics["global"] = overall_statistics
-                out_dict["global"] = overall_statistics
+                # to avoid memory errors.
+                if (
+                    np.max(len(self.property_list_1), len(self.property_list_2))
+                    * np.max(len(self.property_list_1[0]), len(self.property_list_2[0]))
+                    > 100000
+                ):
+                    _min_len = np.min(
+                        len(self.property_list_1), len(self.property_list_2)
+                    )
+                    MAX_NUM_POINTS = 20000
+                    random_indices = np.random.choice(
+                        _min_len, np.min(_min_len, MAX_NUM_POINTS), replace=False
+                    )
+
+
+                    mmd, mmd_p = DistComparison.mmd_test(
+                        np.array(self.property_list_1).T[random_indices,:],
+                        np.array(self.property_list_2).T[random_indices, :],
+                    )
+                    overall_statistics = {"mmd_statistic": mmd, "mmd_p_value": mmd_p}
+                    self.properties_statistics["global"] = overall_statistics
+                    out_dict["global"] = overall_statistics
+
+                else:
+                    mmd, mmd_p = DistComparison.mmd_test(
+                        np.array(self.property_list_1).T,
+                        np.array(self.property_list_2).T,
+                    )
+                    overall_statistics = {"mmd_statistic": mmd, "mmd_p_value": mmd_p}
+                    self.properties_statistics["global"] = overall_statistics
+                    out_dict["global"] = overall_statistics
             return out_dict
         else:
             out_dict = {}
