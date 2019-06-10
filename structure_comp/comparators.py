@@ -45,6 +45,7 @@ import concurrent.futures
 from functools import partial
 from numba import jit
 
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("RemoveDuplicates")
 logger.setLevel(logging.DEBUG)
 
@@ -1075,12 +1076,20 @@ class DistComparison(Statistics):
         else:
             sigma = sigma_ratio * stdev_y
 
-        logger.debug("using %s bins and sigma %s", binnum, sigma)
+        logger.debug(
+            "using %s bins and sigma %s for x of len %s and y of len %s",
+            binnum,
+            sigma,
+            len(x),
+            len(y),
+        )
+
+        print(type(x), type(y))
 
         if len(x) > len(y):
-            y = random.sample(x, len(y))
+            x = random.sample(list(x), len(y))
         elif len(y) > len(x):
-            y = random.sample(y, len(x))
+            y = random.sample(list(y), len(x))
 
         # make joint histogram
         jh = np.histogram2d(x, y, bins=binnum)[0]
@@ -1136,12 +1145,14 @@ class DistComparison(Statistics):
 
     @staticmethod
     def _gaussian_kernel(z, length):
+        logger.debug("i am in the kernel constrution routine")
         z = z[:, :, None]
         pre_exp = (np.square((z - np.transpose(z)))).sum(axis=1)
         return np.exp(-(pre_exp / length))
 
     @staticmethod
     def _mmd(x, y, rbf_width):
+        logger.debug("i am in the mmd routine")
         n = len(x)
         m = len(y)
         z = np.concatenate([x, y])
@@ -1157,6 +1168,7 @@ class DistComparison(Statistics):
 
     @staticmethod
     def mmd_test(x, y):
+        logger.debug("i am in the mmd test routine")
         if x.shape[1] > 1:
             if len(x) > len(y):
                 x_kernel = x[np.random.choice(range(len(x)), len(y), replace=False)]
@@ -1183,6 +1195,7 @@ class DistComparison(Statistics):
 
     @staticmethod
     def _mmd_null(x, y, rbf_width, n_samples):
+        logger.debug("Calculating mmd null")
         s = [False for _ in range(n_samples)]
         z = np.concatenate([x, y])
         for i in range(n_samples):
@@ -1200,6 +1213,10 @@ class DistComparison(Statistics):
         Returns:
             dictionary with test results
         """
+        property_list_1 = np.array(property_list_1)
+        property_list_2 = np.array(property_list_2)
+        property_list_1 = property_list_1[np.isfinite(property_list_1)]
+        property_list_2 = property_list_2[np.isfinite(property_list_2)]
 
         # Mutual information, continuous form from https://gist.github.com/GaelVaroquaux/ead9898bd3c973c40429
         mi = DistComparison._mutual_information_2d(property_list_1, property_list_2)
@@ -1216,7 +1233,7 @@ class DistComparison(Statistics):
         # https://github.com/dougalsutherland/mmd/blob/master/examples/mmd%20regression%20example.ipynb
         logger.warning(
             "the current implementation of mmd is not optimal, "
-            "a optional support for shogon (selects optimal kernel, linear algorithm) "
+            "a optional support for shogon (selects optimal kernel, linear falgorithm) "
             "will be implemented in a further release"
         )
 
