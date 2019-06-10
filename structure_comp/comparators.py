@@ -1289,9 +1289,8 @@ class DistComparison(Statistics):
                         _min_len, np.min(_min_len, MAX_NUM_POINTS), replace=False
                     )
 
-
                     mmd, mmd_p = DistComparison.mmd_test(
-                        np.array(self.property_list_1).T[random_indices,:],
+                        np.array(self.property_list_1).T[random_indices, :],
                         np.array(self.property_list_2).T[random_indices, :],
                     )
                     overall_statistics = {"mmd_statistic": mmd, "mmd_p_value": mmd_p}
