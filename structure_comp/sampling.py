@@ -55,7 +55,7 @@ class Sampler:
         """
         self.selection = []
 
-        print(self.dataframe[self.columns].values.head())
+        print(self.dataframe[self.columns].head())
         if standardize:
             data = StandardScaler().fit_transform(self.dataframe[self.columns].values)
         else:
