@@ -59,7 +59,7 @@ class Sampler:
 
         data_rows = []
         for _, row in self.dataframe[self.columns].iterrows():
-            data_rows.append(flatten(list(row)))
+            data_rows.append(list(flatten(list(row))))
         data = np.array(data_rows)
 
         if standardize:
@@ -95,7 +95,7 @@ class Sampler:
 
         data_rows = []
         for _, row in self.dataframe[self.columns].iterrows():
-            data_rows.append(flatten(list(row)))
+            data_rows.append(list(flatten(list(row))))
         data = np.array(data_rows)
         
         print(data[0:1])
