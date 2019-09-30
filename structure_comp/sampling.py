@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from ase.io import read
+from .utils import flatten
 from ase.visualize.plot import plot_atoms
 from scipy.spatial import distance
 from sklearn import metrics
@@ -53,10 +54,13 @@ class Sampler:
             list with the sampled names
             list of indices
         """
-        
+
         self.selection = []
 
-        data = np.array(self.dataframe[self.columns].values)
+        data_rows = []
+        for _, row in self.dataframe[self.columns].iterrows():
+            data_rows.append(flatten(row.values))
+        data = np.array(data_rows)
 
         if standardize:
             data = StandardScaler().fit_transform(data)
@@ -91,7 +95,7 @@ class Sampler:
 
         data_rows = []
         for _, row in self.dataframe[self.columns].iterrows():
-            data_rows.append(list(row))
+            data_rows.append(flatten(row.values))
         data = np.array(data_rows)
         print(self.dataframe[self.columns].values)
         print(data.shape)

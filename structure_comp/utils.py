@@ -11,6 +11,7 @@ __status__ = 'First Draft, Testing'
 from glob import glob
 import os
 import re
+from collections import Iterable        
 from numba import jit
 import unicodedata
 from collections import defaultdict  # thanks Raymond Hettinger!
@@ -437,3 +438,14 @@ def get_average_vdw_radii(site0, site1):
     vdw = (vdw0 + vdw1) / 200
 
     return vdw
+                   
+
+
+def flatten(items):
+    """Yield items from any nested iterable; see Reference."""
+    for x in items:
+        if isinstance(x, Iterable) and not isinstance(x, (str, bytes)):
+            for sub_x in flatten(x):
+                yield sub_x
+        else:
+            yield x
