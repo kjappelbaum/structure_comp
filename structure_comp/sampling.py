@@ -93,9 +93,9 @@ class Sampler():
 
         if standardize:
             data = StandardScaler().fit_transform(
-                self.dataframe[self.columns].values)
+                self.dataframe[self.columns])
         else:
-            data = self.dataframe[self.columns].values
+            data = self.dataframe[self.columns]
 
         index = np.random.randint(0, len(data) - 1)
 
