@@ -96,8 +96,9 @@ class Sampler:
         data_rows = []
         for _, row in self.dataframe[self.columns].iterrows():
             data_rows.append(list(flatten(list(row))))
-        data = np.array(data_rows)
-
+        data = np.array(data_rows).astype(np.float32)
+        del data_rows 
+        
         if standardize:
             data = StandardScaler().fit_transform(data)
 
@@ -123,7 +124,7 @@ class Sampler:
 
         selection = list(self.dataframe[self.name][greedy_indices].values)
         self.selection = selection
-        
+
         return selection, list(flatten(greedy_indices))
 
     def inspect_sample(self, path: str = "", extension: str = "", mode: str = "ase"):
