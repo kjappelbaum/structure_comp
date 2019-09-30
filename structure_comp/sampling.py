@@ -53,6 +53,7 @@ class Sampler:
             list with the sampled names
             list of indices
         """
+        
         self.selection = []
 
         data = np.array(self.dataframe[self.columns].values)
@@ -89,6 +90,7 @@ class Sampler:
         self.selection = []
 
         data = np.array(self.dataframe[self.columns].values)
+        print(data.shape)
 
         if standardize:
             data = StandardScaler().fit_transform(data)
