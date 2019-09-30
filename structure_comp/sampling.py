@@ -90,6 +90,7 @@ class Sampler:
         self.selection = []
 
         data = np.array(self.dataframe[self.columns].values)
+        print(self.dataframe[self.columns].values)
         print(data.shape)
 
         if standardize:
