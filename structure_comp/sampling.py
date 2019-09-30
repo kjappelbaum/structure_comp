@@ -91,7 +91,7 @@ class Sampler:
 
         data_rows = []
         for _, row in self.dataframe[self.columns].iterrows():
-            data_rows.append(row.values)
+            data_rows.append(list(row))
         data = np.array(data_rows)
         print(self.dataframe[self.columns].values)
         print(data.shape)
