@@ -55,11 +55,10 @@ class Sampler:
         """
         self.selection = []
 
-        print(self.dataframe[self.columns].head())
+        data = np.array(self.dataframe[self.columns].values)
+
         if standardize:
-            data = StandardScaler().fit_transform(self.dataframe[self.columns].values)
-        else:
-            data = self.dataframe[self.columns].values
+            data = StandardScaler().fit_transform(data)
 
         kmeans = KMeans(n_clusters=self.k).fit(data)
         cluster_centers = kmeans.cluster_centers_
@@ -89,10 +88,10 @@ class Sampler:
 
         self.selection = []
 
+        data = np.array(self.dataframe[self.columns].values)
+
         if standardize:
-            data = StandardScaler().fit_transform(self.dataframe[self.columns].values)
-        else:
-            data = self.dataframe[self.columns].values
+            data = StandardScaler().fit_transform(data)
 
         index = np.random.randint(0, len(data) - 1)
 
