@@ -53,6 +53,7 @@ class Sampler():
 
         Returns:
             list with the sampled names
+            list of indices
         """
         self.selection = []
 
@@ -70,7 +71,7 @@ class Sampler():
         selection = list(self.dataframe[self.name].iloc[closest].values)
         self.selection = selection
 
-        return selection
+        return selection, closest 
 
     def greedy_farthest_point_samples(self,
                                       metric: str = 'euclidean',
