@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from ase.io import read
-from .utils import flatten
+from .utils import flatten, chunks
 from ase.visualize.plot import plot_atoms
 from scipy.spatial import distance
 from sklearn import metrics
@@ -102,18 +102,23 @@ class Sampler:
         if standardize:
             data = StandardScaler().fit_transform(data)
 
-        index = np.random.randint(0, len(data) - 1)
+        
 
         greedy_data = []
         greedy_data.append(data[index])
 
-        remaining = np.delete(data, index, 0)
+        chunks = int(data.shape[0] * data.shape[1] / 3000) 
+        chunksize = int(data.shape[0] / chunks)
+             
+        for d in cunks(data, chunksize):
+            index = np.random.randint(0, len(d) - 1)   
+            remaining = np.delete(d, index, 0)
 
-        for _ in range(self.k - 1):
-            dist = distance.cdist(remaining, greedy_data, metric)
-            greedy_index = np.argmax(np.argmax(np.min(dist, axis=0)))
-            greedy_data.append(remaining[greedy_index])
-            remaining = np.delete(remaining, greedy_index, 0)
+            for _ in range(self.k - 1):
+                dist = distance.cdist(remaining, greedy_data, metric)
+                greedy_index = np.argmax(np.argmax(np.min(dist, axis=0)))
+                greedy_data.append(remaining[greedy_index])
+                remaining = np.delete(remaining, greedy_index, 0)
 
         greedy_indices = []
 

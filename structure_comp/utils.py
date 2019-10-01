@@ -1,17 +1,17 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-__author__ = 'Kevin M. Jablonka'
-__copyright__ = 'MIT License'
-__maintainer__ = 'Kevin M. Jablonka'
-__email__ = 'kevin.jablonka@epfl.ch'
-__version__ = '0.1.0'
-__date__ = '25.03.19'
-__status__ = 'First Draft, Testing'
+__author__ = "Kevin M. Jablonka"
+__copyright__ = "MIT License"
+__maintainer__ = "Kevin M. Jablonka"
+__email__ = "kevin.jablonka@epfl.ch"
+__version__ = "0.1.0"
+__date__ = "25.03.19"
+__status__ = "First Draft, Testing"
 
 from glob import glob
 import os
 import re
-from collections import Iterable        
+from collections import Iterable
 from numba import jit
 import unicodedata
 from collections import defaultdict  # thanks Raymond Hettinger!
@@ -29,10 +29,11 @@ import random
 from pymatgen.io.cif import CifParser
 from mendeleev import element
 import logging
+
 logger = logging.getLogger()
 
 
-def get_structure_list(directory: str, extension: str = 'cif') -> list:
+def get_structure_list(directory: str, extension: str = "cif") -> list:
     """
 
     Args:
@@ -42,12 +43,11 @@ def get_structure_list(directory: str, extension: str = 'cif') -> list:
     Returns:
 
     """
-    logger.info('getting structure list')
+    logger.info("getting structure list")
     if extension:
-        structure_list = glob(
-            os.path.join(directory, ''.join(['*.', extension])))
+        structure_list = glob(os.path.join(directory, "".join(["*.", extension])))
     else:
-        structure_list = glob(os.path.join(directory, '*'))
+        structure_list = glob(os.path.join(directory, "*"))
     return structure_list
 
 
@@ -58,7 +58,6 @@ def get_rmsd(structure_a: Structure, structure_b: Structure) -> float:
     q_review = reorder_hungarian(p_a, q_a, P, Q)
     Q = Q[q_review]
     # q_atoms = q_atoms[q_review]
-
 
     result = kabsch_rmsd(P, Q)
     return result
@@ -78,9 +77,9 @@ def get_number_bins(array):
         number of bins
     """
 
-    h = 2 * stats.iqr(array) * len(array)**(-1.0 / 3.0)
+    h = 2 * stats.iqr(array) * len(array) ** (-1.0 / 3.0)
 
-    nb = (max(array) - min(array) / h == np.infty)
+    nb = max(array) - min(array) / h == np.infty
     if (nb == np.infty) or (nb == -np.infty):
         if len(array) > 100:
             number_bins = int(len(array) / 10)
@@ -129,7 +128,7 @@ def tanimoto_distance(array_1, array_2):
 
     """
     xy = np.dot(array_1, array_2)
-    return xy / (np.sum(array_1**2) + np.sum(array_2**2) - xy)
+    return xy / (np.sum(array_1 ** 2) + np.sum(array_2 ** 2) - xy)
 
 
 def get_hash(structure: Structure, get_niggli=True):
@@ -173,8 +172,9 @@ def get_cheap_hash(structure: Structure, get_niggli=True):
     return comp_hash + density_hash
 
 
-def attempt_supercell_pymatgen(structure_1: Structure,
-                               structure_2: Structure) -> Structure:
+def attempt_supercell_pymatgen(
+    structure_1: Structure, structure_2: Structure
+) -> Structure:
     lattice1 = np.array(structure_1.lattice.abc)
     lattice2 = np.array(structure_2.lattice.abc)
 
@@ -190,7 +190,7 @@ def attempt_supercell_pymatgen(structure_1: Structure,
     x_int = x.astype(int)
     if np.all(np.isclose(x, x_int, 0.001)):
         x = x_int
-        logger.debug('found supercell with scaling factors %s', x)
+        logger.debug("found supercell with scaling factors %s", x)
         if one_larger_than_two:
             structure_2 = structure_2 * x
         else:
@@ -208,12 +208,22 @@ def slugify(value, allow_unicode=False):
     """
     value = str(value)
     if allow_unicode:
-        value = unicodedata.normalize('NFKC', value)
+        value = unicodedata.normalize("NFKC", value)
     else:
-        value = unicodedata.normalize('NFKD', value).encode(
-            'ascii', 'ignore').decode('ascii')
-    value = re.sub(r'[^\w\s-]', '', value).strip().lower()
-    return re.sub(r'[-\s]+', '-', value)
+        value = (
+            unicodedata.normalize("NFKD", value)
+            .encode("ascii", "ignore")
+            .decode("ascii")
+        )
+    value = re.sub(r"[^\w\s-]", "", value).strip().lower()
+    return re.sub(r"[-\s]+", "-", value)
+
+
+def chunks(l, n):
+    """ Yield successive n-sized chunks from l.
+    """
+    for i in xrange(0, len(l), n):
+        yield l[i : i + n]
 
 
 @jit
@@ -229,17 +239,15 @@ def incremental_farthest_search(points, k):
     """
     remaining_points = points[:]
     solution_set = []
-    solution_set.append(remaining_points.pop(\
-                                             random.randint(0, len(remaining_points) - 1)))
+    solution_set.append(
+        remaining_points.pop(random.randint(0, len(remaining_points) - 1))
+    )
     for _ in range(k - 1):
-        distances = [
-            np.linalg.norm(p - solution_set[0]) for p in remaining_points
-        ]
+        distances = [np.linalg.norm(p - solution_set[0]) for p in remaining_points]
         for i, p in enumerate(remaining_points):
             for _, s in enumerate(solution_set):
                 distances[i] = min(distances[i], np.linalg.norm(p - s))
-        solution_set.append(
-            remaining_points.pop(distances.index(max(distances))))
+        solution_set.append(remaining_points.pop(distances.index(max(distances))))
     return solution_set
 
 
@@ -252,7 +260,7 @@ def get_symbol_list(structure: Structure) -> list:
     Returns:
 
     """
-    return [s.species_string.split(':')[0] for s in structure.sites]
+    return [s.species_string.split(":")[0] for s in structure.sites]
 
 
 def get_symbol_indices(structure: Structure) -> list:
@@ -302,10 +310,9 @@ def get_subgraphs_as_molecules_all(sg, use_weights=False):
     # these will subgraphs representing crystals
     molecule_subgraphs = []
     for subgraph in all_subgraphs:
-        intersects_boundary = any([
-            d['to_jimage'] != (0, 0, 0)
-            for u, v, d in subgraph.edges(data=True)
-        ])
+        intersects_boundary = any(
+            [d["to_jimage"] != (0, 0, 0) for u, v, d in subgraph.edges(data=True)]
+        )
         if not intersects_boundary:
             molecule_subgraphs.append(subgraph)
 
@@ -316,11 +323,11 @@ def get_subgraphs_as_molecules_all(sg, use_weights=False):
 
     # now define how we test for isomorphism
     def node_match(n1, n2):
-        return n1['specie'] == n2['specie']
+        return n1["specie"] == n2["specie"]
 
     def edge_match(e1, e2):
         if use_weights:
-            return e1['weight'] == e2['weight']
+            return e1["weight"] == e2["weight"]
         else:
             return True
 
@@ -385,6 +392,7 @@ def get_duplicates_ktree(s: Structure, threshold: float = 0.2) -> list:
 
     return duplicates
 
+
 def get_duplicates_dynamic_threshold(s: Structure, factor: float = 0.5) -> list:
     """
     Tries to do a better job in finding clashing atoms by using a more dynamic threshold based on the VdW
@@ -427,6 +435,7 @@ def get_duplicates_dynamic_threshold(s: Structure, factor: float = 0.5) -> list:
 
     return duplicates
 
+
 def get_vdw_radius(site):
     return element(site.species_string).vdw_radius / 100
 
@@ -438,7 +447,6 @@ def get_average_vdw_radii(site0, site1):
     vdw = (vdw0 + vdw1) / 200
 
     return vdw
-                   
 
 
 def flatten(items):
