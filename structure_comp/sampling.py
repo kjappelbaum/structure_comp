@@ -107,13 +107,15 @@ class Sampler:
         num_chunks = int(data.shape[0] * data.shape[1] / 3000)
         chunksize = int(data.shape[0] / num_chunks)
 
+        # This assumes shuffled data and is used to make stuff a bit less 
+        # memory intensive 
         for d_ in chunks(data, chunksize):
             d = d_
             index = np.random.randint(0, len(d) - 1)
             greedy_data.append(d[index])
             remaining = np.delete(d, index, 0)
 
-            for _ in range(self.k - 1):
+            for _ in range(int(self.k / num_chunks) - 1):
                 dist = distance.cdist(remaining, greedy_data, metric)
                 greedy_index = np.argmax(np.argmax(np.min(dist, axis=0)))
                 greedy_data.append(remaining[greedy_index])
