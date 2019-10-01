@@ -107,7 +107,8 @@ class Sampler:
         num_chunks = int(data.shape[0] * data.shape[1] / 3000)
         chunksize = int(data.shape[0] / num_chunks)
 
-        for d in chunks(data, chunksize):
+        for d_ in chunks(data, chunksize):
+            d = d_
             index = np.random.randint(0, len(d) - 1)
             greedy_data.append(d[index])
             remaining = np.delete(d, index, 0)
