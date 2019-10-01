@@ -97,21 +97,20 @@ class Sampler:
         for _, row in self.dataframe[self.columns].iterrows():
             data_rows.append(list(flatten(list(row))))
         data = np.array(data_rows).astype(np.float32)
-        del data_rows 
-        
+        del data_rows
+
         if standardize:
             data = StandardScaler().fit_transform(data)
 
+        greedy_data = []
         
 
-        greedy_data = []
-        greedy_data.append(data[index])
-
-        chunks = int(data.shape[0] * data.shape[1] / 3000) 
+        chunks = int(data.shape[0] * data.shape[1] / 3000)
         chunksize = int(data.shape[0] / chunks)
-             
-        for d in cunks(data, chunksize):
-            index = np.random.randint(0, len(d) - 1)   
+
+        for d in chunks(data, chunksize):
+            index = np.random.randint(0, len(d) - 1)
+            greedy_data.append(d[index])
             remaining = np.delete(d, index, 0)
 
             for _ in range(self.k - 1):
