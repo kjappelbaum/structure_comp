@@ -103,10 +103,9 @@ class Sampler:
             data = StandardScaler().fit_transform(data)
 
         greedy_data = []
-        
 
-        chunks = int(data.shape[0] * data.shape[1] / 3000)
-        chunksize = int(data.shape[0] / chunks)
+        num_chunks = int(data.shape[0] * data.shape[1] / 3000)
+        chunksize = int(data.shape[0] / num_chunks)
 
         for d in chunks(data, chunksize):
             index = np.random.randint(0, len(d) - 1)
