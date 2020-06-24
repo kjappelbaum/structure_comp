@@ -15,8 +15,9 @@ import shutil
 from pymatgen import Structure
 import concurrent.futures
 from pymatgen.analysis.graphs import StructureGraph
-from pymatgen.analysis.local_env import JmolNN
+from pymatgen.analysis.local_env import JmolNN, CrystalNN
 from pymatgen.io.ase import AseAtomsAdaptor
+from sklearn.preprocessing import StandardScaler
 from scipy.spatial import KDTree
 import tempfile
 import logging
@@ -161,9 +162,9 @@ class RemoveDuplicates:
         Returns:
 
         """
-        symbol_hash = hash(structure.symbol_set)
+        volume = structure.volume
         density = structure.density
-        return symbol_hash, density
+        return volume, density
 
     @staticmethod
     def get_scalar_features_from_file(structure_file):
@@ -176,9 +177,9 @@ class RemoveDuplicates:
 
         """
         structure = Structure.from_file(structure_file)
-        symbol_hash = hash(structure.symbol_set)
+        volume = structure.volume
         density = structure.density
-        return symbol_hash, density
+        return volume, density
 
     @staticmethod
     def get_scalar_df(reduced_structure_list: list):
@@ -206,13 +207,19 @@ class RemoveDuplicates:
             ):
                 features = {
                     "name": structure,
-                    "symbol_hash": result[0],
+                    "volume": result[0],
                     "density": result[1],
                 }
                 feature_list.append(features)
             df = pd.DataFrame(feature_list)
+
             df["density"] = df["density"].astype(np.float16)
-            df["symbol_hash"] = df["symbol_hash"].astype(np.int16)
+            df["volume"] = df["volume"].astype(np.int16)
+
+            scaler = StandardScaler()
+            scaled_values = scaler.fit_transform(df[["volume", "density"]])
+            df[["volume", "density"]] = scaled_values
+
             logger.debug("the dataframe looks like %s", df.head())
         return df
 
@@ -230,23 +237,26 @@ class RemoveDuplicates:
         logger.info("creating scalar features")
         for structure in tqdm(reduced_structure_dict):
             crystal = reduced_structure_dict[structure]
-            symbol_hash, density = RemoveDuplicates.get_scalar_features(crystal)
+            volume, density = RemoveDuplicates.get_scalar_features(crystal)
             features = {
                 "name": structure,
-                "symbol_hash": symbol_hash,
+                "volume": volume,
                 "density": density,
             }
             feature_list.append(features)
         df = pd.DataFrame(feature_list)
         df["density"] = df["density"].astype(np.float16)
-        df["symbol_hash"] = df["symbol_hash"].astype(np.int16)
+        df["volume"] = df["volume"].astype(np.int16)
+        scaler = StandardScaler()
+        scaled_values = scaler.fit_transform(df[["volume", "density"]])
+        df[["volume", "density"]] = scaled_values
         logger.debug("the dataframe looks like %s", df.head())
 
         return df
 
     @staticmethod
     def get_scalar_distance_matrix(
-        scalar_feature_df: pd.DataFrame, threshold: float = 0.01
+        scalar_feature_df: pd.DataFrame, threshold: float = 0.05
     ) -> list:
         """
         Get structures that probably have the same composition.
@@ -262,22 +272,17 @@ class RemoveDuplicates:
         x = scalar_feature_df.drop(columns=["name"]).values
 
         tree = KDTree(x)
-        groups = tree.query_ball_point(x, threshold)
-
-        groups = [g for g in groups if len(g) >= 2]
-
-        del x
-        del tree
 
         duplicates = []
-        for g in groups:
-            if len(g) > 2:
-                for _, index in enumerate(g[1:]):
-                    duplicates.append(tuple((g[0], index)))
-            else:
-                duplicates.append(tuple(g))
+        for i, row in enumerate(x):
+            g = tree.query_ball_point(row, threshold)
+            if len(g) >= 2:
+                for _, index in enumerate(g):
+                    if index != i:
+                        duplicates.append(tuple((i, index)))
 
-        del groups
+        del tree
+        del x
 
         duplicates = list(set(map(tuple, map(sorted, duplicates))))
 
@@ -349,8 +354,11 @@ class RemoveDuplicates:
                         pairs.append(items)
         return pairs
 
-    def compare_graph_pair(self, items):
-        nn_strategy = JmolNN()
+    def compare_graph_pair(self, items, method="jmolnn"):
+        if method == "jmolnn":
+            nn_strategy = JmolNN()
+        elif method == "crystalgraph":
+            nn_strategy = CrystalNN()
         crystal_a = Structure.from_file(
             self.scalar_feature_matrix.iloc[items[0]]["name"]
         )
@@ -386,7 +394,7 @@ class RemoveDuplicates:
                 logger.debug("Found duplicate")
                 return items
         except ValueError:
-            logger.debug("Structures were probably not different")
+            logger.debug("Structures were probably not duplicates")
             return False
 
     def compare_graphs(self, tupellist: list) -> list:
@@ -401,6 +409,7 @@ class RemoveDuplicates:
         """
         logger.info("constructing and comparing structure graphs")
         pairs = []
+        print(tupellist)
         with concurrent.futures.ProcessPoolExecutor() as executor:
             if not self.cached:
                 for _, result in tqdm(
