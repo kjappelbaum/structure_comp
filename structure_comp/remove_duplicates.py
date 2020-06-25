@@ -119,20 +119,23 @@ class RemoveDuplicates:
     def get_reduced_structure(self, structure):
         sname = Path(structure).name
         stem = Path(structure).stem
-        if self.cached:
-            self.reduced_structure_dict = {}
         try:
-            # Cif reader in ASE seems more stable to me, especially for CSD data
-            atoms = read(structure)
+            if self.cached:
+                self.reduced_structure_dict = {}
+            try:
+                # Cif reader in ASE seems more stable to me, especially for CSD data
+                atoms = read(structure)
+            except Exception:
+                logger.error("Could not read structure %s", stem)
+            else:
+                niggli_reduce(atoms)
+                if not self.cached:
+                    write(os.path.join(self.tempdirpath, sname), atoms)
+                else:
+                    crystal = AseAtomsAdaptor.get_structure(atoms)
+                    self.reduced_structure_dict[stem] = crystal
         except Exception:
             logger.error("Could not read structure %s", stem)
-        else:
-            niggli_reduce(atoms)
-            if not self.cached:
-                write(os.path.join(self.tempdirpath, sname), atoms)
-            else:
-                crystal = AseAtomsAdaptor.get_structure(atoms)
-                self.reduced_structure_dict[stem] = crystal
         return stem
 
     def get_reduced_structures(self):
@@ -145,7 +148,7 @@ class RemoveDuplicates:
             self.tempdirpath = tempfile.mkdtemp()
             self.reduced_structure_dir = self.tempdirpath
         logger.info("creating reduced structures")
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        with concurrent.futures.ProcessPoolExecutor() as executor:
             for _ in tqdm(
                 executor.map(self.get_reduced_structure, self.structure_list),
                 total=len(self.structure_list),
