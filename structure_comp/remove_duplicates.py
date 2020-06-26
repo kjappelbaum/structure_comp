@@ -1,14 +1,7 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
-__author__ = "Kevin M. Jablonka"
-__copyright__ = "MIT License"
-__maintainer__ = "Kevin M. Jablonka"
-__email__ = "kevin.jablonka@epfl.ch"
-__version__ = "0.1.0"
-__date__ = "14.04.19"
-__status__ = "First Draft, Testing"
 
 import os
+from functools import partial
 from pathlib import Path
 from contextlib import contextmanager
 import shutil
@@ -33,7 +26,7 @@ from .utils import get_structure_list, get_hash, attempt_supercell_pymatgen
 from collections import defaultdict
 
 logger = logging.getLogger("RemoveDuplicates")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 # ToDo: add XTalComp support
 # ToDo: more useful error message when file cannot be read
@@ -63,6 +56,8 @@ class RemoveDuplicates:
         self.similar_composition_tuples = []
         self.try_supercell = try_supercell
         self.tempdirpath = None
+        self.atom_threshold = 5000
+        self.graph_dict = {}
 
     def __repr__(self):
         return f"RemoveDuplicates on {len(self.structure_list)!r} structures"
@@ -125,6 +120,8 @@ class RemoveDuplicates:
             try:
                 # Cif reader in ASE seems more stable to me, especially for CSD data
                 atoms = read(structure)
+                if len(atoms) > self.atom_threshold:
+                    logger.error("Larger than threshold %s", stem)
             except Exception:
                 logger.error("Could not read structure %s", stem)
             else:
@@ -297,7 +294,7 @@ class RemoveDuplicates:
     def compare_rmsd(
         tupellist: list,
         scalar_feature_df: pd.DataFrame,
-        threshold: float = 0.05,
+        threshold: float = 0.1,
         try_supercell: bool = True,
         reduced_structure_dict=None,
     ) -> list:
@@ -357,41 +354,9 @@ class RemoveDuplicates:
                         pairs.append(items)
         return pairs
 
-    def compare_graph_pair(self, items, method="jmolnn"):
-        if method == "jmolnn":
-            nn_strategy = JmolNN()
-        elif method == "crystalgraph":
-            nn_strategy = CrystalNN()
-        crystal_a = Structure.from_file(
-            self.scalar_feature_matrix.iloc[items[0]]["name"]
-        )
-        crystal_b = Structure.from_file(
-            self.scalar_feature_matrix.iloc[items[1]]["name"]
-        )
-        if self.try_supercell:
-            crystal_a, crystal_b = attempt_supercell_pymatgen(crystal_a, crystal_b)
-        sgraph_a = StructureGraph.with_local_env_strategy(crystal_a, nn_strategy)
-        sgraph_b = StructureGraph.with_local_env_strategy(crystal_b, nn_strategy)
-        try:
-            if sgraph_a == sgraph_b:
-                logger.debug("Found duplicate")
-                return items
-        except ValueError:
-            logger.debug("Structures were probably not different")
-            return False
-
     def compare_graph_pair_cached(self, items):
-        nn_strategy = JmolNN()
-        crystal_a = self.reduced_structure_dict[
-            self.scalar_feature_matrix.iloc[items[0]]["name"]
-        ]
-        crystal_b = self.reduced_structure_dict[
-            self.scalar_feature_matrix.iloc[items[1]]["name"]
-        ]
-        if self.try_supercell:
-            crystal_a, crystal_b = attempt_supercell_pymatgen(crystal_a, crystal_b)
-        sgraph_a = StructureGraph.with_local_env_strategy(crystal_a, nn_strategy)
-        sgraph_b = StructureGraph.with_local_env_strategy(crystal_b, nn_strategy)
+        sgraph_a = self.graph_dict[items[0]]
+        sgraph_b = self.graph_dict[items[1]]
         try:
             if sgraph_a == sgraph_b:
                 logger.debug("Found duplicate")
@@ -400,39 +365,68 @@ class RemoveDuplicates:
             logger.debug("Structures were probably not duplicates")
             return False
 
+    def precompute_graphs(
+        self, tupellist, cached=False, cached_graphs=True, method="jmolnn"
+    ):
+        unique_indices = set(sum(tupellist, ()))
+
+        graph_computer = partial(self.compute_graph, cached=cached, method=method,)
+
+        indices = []
+        results = []
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            for index, res in zip(
+                unique_indices, executor.map(graph_computer, unique_indices)
+            ):
+                indices.append(index)
+                results.append(res)
+
+        self.graph_dict[index] = dict(zip(indices, results))
+
+    def compute_graph(self, index, cached=False, method="jmolnn"):
+        if cached:
+            s = self.reduced_structure_dict[
+                self.scalar_feature_matrix.iloc[index]["name"]
+            ]
+        else:
+            s = Structure.from_file(self.scalar_feature_matrix.iloc[index]["name"])
+
+        if method == "jmolnn":
+            nn_strategy = JmolNN()
+        elif method == "crystalgraph":
+            nn_strategy = CrystalNN()
+        else:
+            nn_strategy = JmolNN()
+
+        graph = StructureGraph.with_local_env_strategy(s, nn_strategy)
+
+        return graph
+
     def compare_graphs(self, tupellist: list) -> list:
         """
 
         Args:
             tupellist:
-            scalar_feature_df:
 
         Returns:
 
         """
         logger.info("constructing and comparing structure graphs")
         pairs = []
-        print(tupellist)
+
+        self.precompute_graphs(tupellist)
+
         with concurrent.futures.ProcessPoolExecutor() as executor:
-            if not self.cached:
-                for _, result in tqdm(
-                    zip(tupellist, executor.map(self.compare_graph_pair, tupellist)),
-                    total=len(tupellist),
-                ):
-                    logger.debug(result)
-                    if result:
-                        pairs.append(result)
-            else:
-                for _, result in tqdm(
-                    zip(
-                        tupellist,
-                        executor.map(self.compare_graph_pair_cached, tupellist),
-                    ),
-                    total=len(tupellist),
-                ):
-                    logger.debug(result)
-                    if result:
-                        pairs.append(result)
+            for _, result in tqdm(
+                zip(
+                    tupellist, executor.map(self.compare_graph_pair_cached, tupellist),
+                ),
+                total=len(tupellist),
+            ):
+                logger.debug(result)
+                if result:
+                    pairs.append(result)
+
         return pairs
 
     def get_graph_hash_dict(self, structure):
