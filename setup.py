@@ -11,7 +11,7 @@ setup(
         'scikit-learn', 'numba', 'PyCifRW', 'matplotlib', 'mendeleev'
     ],
     extras_require={
-        'testing': ['pytest', 'pytest-cov<2.6'],
+        'testing': ['pytest', 'pytest-cov<2.11'],
         'openbabel': ['openbabel'],
         'docs': ['sphinx-rtd-theme', 'sphinxcontrib-bibtex'],
         'pre-commit': [
