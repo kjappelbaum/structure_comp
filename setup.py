@@ -15,7 +15,7 @@ setup(
         'openbabel': ['openbabel'],
         'docs': ['sphinx-rtd-theme', 'sphinxcontrib-bibtex'],
         'pre-commit': [
-            'pre-commit==1.11.0', 'yapf==0.24.0', 'prospector==1.1.5',
+            'pre-commit==1.11.0', 'yapf==0.30.0', 'prospector==1.1.5',
             'pylint==1.9.3'
         ]
     },
